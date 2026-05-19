@@ -1,0 +1,8 @@
+build/
+
+libs/
+test/
+
+*.geany
+
+CMakeLists.txt
