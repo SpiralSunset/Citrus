@@ -1,4 +1,5 @@
 #include "citrus/board/Board.h"
+#include "citrus/board/Bitboard.h"
 #include <algorithm>
 
 Board::Board() {
@@ -10,7 +11,7 @@ Board::Board() {
 		0x2400000000000024, // Bishops
 		0x8100000000000081, // Rooks
 		0x0800000000000008, // Queens
-		0x8000000000000080  // Kings
+		0x1000000000000010  // Kings
 	};
 }
 
@@ -28,4 +29,24 @@ uint64_t Board::get_piece_set(Color c) const {
 
 uint64_t Board::get_piece_set(PieceType pt, Color c) const {
 	return pieces[pt] & pieces[c];
+}
+
+std::array<Board::Piece, 64> Board::to_array() {
+	std::array<Board::Piece, 64> out;
+	
+	for (int i = Board::Color::cWhite; i <= Board::Color::cBlack; ++i) {
+		for (int j = Board::PieceType::Pawn; j <= Board::PieceType::King; ++j) {
+			Board::Piece p;
+			p.pt = static_cast<Board::PieceType>(j);
+			p.c = static_cast<Board::Color>(i);
+			
+			uint64_t bb = Board::get_piece_set(p.pt, p.c);
+			while (bb) {
+				int idx = pop_lsb(bb);
+				out[idx] = p;
+			}
+		} 
+	}
+	
+	return out;
 }

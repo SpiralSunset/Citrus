@@ -1,18 +1,21 @@
 #include "citrus/board/Position.h"
+#include <algorithm>
 
 Position::Position() {
 	side_to_move = Board::Color::cWhite;
-	castling_rights[Board::Color::cWhite] = true;
-	castling_rights[Board::Color::cBlack] = true;
+	castling_rights.fill(true);
 	ep_square = -1;
+	halfmove_clock = 0;
+	fullmove_counter = 0;
 }
 
-Position::Position(Board new_board, Board::Color new_side_to_move, bool new_castling_rights[2], int new_ep_square) {
+Position::Position(Board new_board, Board::Color new_side_to_move, std::array<bool, 4> new_castling_rights, int new_ep_square, int new_halfmove_clock, int new_fullmove_counter) {
 	board = new_board;
 	side_to_move = new_side_to_move;
-	castling_rights[0] = new_castling_rights[0];
-	castling_rights[1] = new_castling_rights[1];
+	std::copy(new_castling_rights.begin(), new_castling_rights.end(), castling_rights.begin());
 	ep_square = new_ep_square;
+	halfmove_clock = new_halfmove_clock;
+	fullmove_counter = new_fullmove_counter;
 }
 
 
@@ -24,10 +27,18 @@ Board::Color Position::get_side_to_move() const {
 	return side_to_move;
 }
 
-bool Position::get_castling_rights(Board::Color c) const {
-	return castling_rights[c];
+bool Position::get_castling_right(Position::CastlingRight cr) const {
+	return castling_rights[(uint8_t)cr];
 }
 
 int Position::get_ep_square() const {
 	return ep_square;
+}
+
+int Position::get_halfmove_clock() const {
+	return halfmove_clock;
+}
+
+int Position::get_fullmove_counter() const {
+	return fullmove_counter;
 }

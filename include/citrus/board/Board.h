@@ -6,7 +6,8 @@ class Board {
 	public:
 		enum Color {
 			cWhite,
-			cBlack
+			cBlack,
+			cNone
 		};
 		
 		enum PieceType {
@@ -17,7 +18,13 @@ class Board {
 			Bishop,
 			Rook,
 			Queen,
-			King
+			King,
+			None
+		};
+		
+		struct Piece {
+			PieceType pt = None;
+			Color c = cNone;
 		};
 		
 		// Creates a board with the default configuration
@@ -30,6 +37,7 @@ class Board {
 		uint64_t get_piece_set(Color c) const;
 		uint64_t get_piece_set(PieceType pt, Color c) const;
 		
+		std::array<Piece, 64> to_array();
 		std::string to_string() const;
 		
 	private:
