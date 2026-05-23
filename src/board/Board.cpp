@@ -20,14 +20,17 @@ Board::Board(std::array<uint64_t, 8> new_pieces) {
 }
 
 uint64_t Board::get_piece_set(PieceType pt) const {
+	if (pt == Board::PieceType::None) return 0;
 	return pieces[pt];
 }
 
 uint64_t Board::get_piece_set(Color c) const {
+	if (c == Board::Color::cNone) return 0;
 	return pieces[c];
 }
 
 uint64_t Board::get_piece_set(PieceType pt, Color c) const {
+	if (pt == Board::PieceType::None || c == Board::Color::cNone) return 0;
 	return pieces[pt] & pieces[c];
 }
 

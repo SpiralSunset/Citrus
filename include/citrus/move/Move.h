@@ -1,14 +1,21 @@
 #include <cstdint>
 #include <string>
 
-/*
-A move is a 16 bit word.
-Bits 15-9: where the piece is moving from
-Bits 8-3: where the piece is moving to
-Bits 3-0: special move flags
-*/
+/**
+ * \brief Represents a movement of a chess piece.
+ * 
+ * Here, a piece movement is represented as a 16 bit word.
+ * Bits 15-9: where the piece is moving from
+ * Bits 8-3: where the piece is moving to
+ * Bits 3-0: special move flags
+ * 
+ * The special move flags indicate what type of move is being performed.
+ */
 class Move {	
 	public:
+		/**
+		 * \brief The types of moves as represented in the special move flags.
+		 */
 		enum class MoveType : std::uint8_t {
 			Quiet = 0,
 			DoublePawnPush = 1,
@@ -28,14 +35,25 @@ class Move {
 			QueenPromotionCapture = 15
 		};
 		
+		/**
+		 * \brief Creates a move from the given information.
+		 * 
+		 * \param from where the piece is moving from.
+		 * \param to where the piece is moving to.
+		 * \param move_type the type of move being performed.
+		 */
 		Move(int from, int to, MoveType move_type);
 		
+		/// \return where the piece is moving from.
 		int from() const;
+		
+		/// \return where the piece is moving to.
 		int to() const;
+		
+		/// \return the type of move being performed.
 		MoveType move_type() const;
 		
-		std::string to_string() const;
-		
 	private:
+		/// \brief The 16 bit word that stores the move.
 		uint16_t raw_move;
 };

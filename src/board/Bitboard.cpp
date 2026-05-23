@@ -1,7 +1,7 @@
 #include "citrus/board/Bitboard.h"
 #include <cstdint>
 
-int pop_count(uint64_t bb) {
+int popcount(uint64_t bb) {
 	return __builtin_popcount(bb);
 }
 

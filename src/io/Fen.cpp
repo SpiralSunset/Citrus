@@ -6,6 +6,9 @@ std::string Fen::pos_to_str(Position pos) {
 	
 	std::array<Board::Piece, 64> piece_list = pos.get_board().to_array();
 	
+	// FEN requires that:
+	// - each row is printed from rank 8 to 1
+	// - each column is printed from file A to H
 	int empty_counter = 0;
 	for (int row = 7; row >= 0; --row) {
 		for (int i = row * 8; i < (row + 1) * 8; ++i) {
@@ -78,9 +81,43 @@ Position Fen::str_to_pos(std::string str) {
 			sq_idx -= 16;
 		}
 	}
-	
 	Board board(pieces);
-	Position pos(board);
+	
+	iss >> buffer;
+    Board::Color side_to_move = buffer == "w" ? Board::Color::cWhite : Board::Color::cBlack;
+
+    std::array<bool, 4> castling_rights;
+    castling_rights.fill(false);
+    iss >> buffer;
+    for (char c : buffer) {
+        switch (c) {
+            case 'K':
+                castling_rights[(int)Position::CastlingRight::wKing] = true;
+                break;
+            case 'Q':
+                castling_rights[(int)Position::CastlingRight::wQueen] = true;
+                break;
+            case 'k':
+                castling_rights[(int)Position::CastlingRight::bKing] = true;
+                break;
+            case 'q':
+                castling_rights[(int)Position::CastlingRight::bQueen] = true;
+                break;
+        }
+    }
+
+    int ep_square = -1;
+    iss >> buffer;
+    if (buffer.at(0) >= 'a' && buffer.at(0) <= 'z') {
+        ep_square = buffer.at(0) - 'a' + ((buffer.at(1) - '1') * 8);
+    }
+
+    iss >> buffer;
+    int halfmove_clock = std::stoi(buffer);
+    iss >> buffer;
+    int fullmove_counter = std::stoi(buffer);
+
+    Position pos(board, side_to_move, castling_rights, ep_square, halfmove_clock, fullmove_counter);
 	return pos;
 }
 
