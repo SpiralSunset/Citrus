@@ -1,4 +1,5 @@
 #include "citrus/board/Board.h"
+#include "citrus/move/Move.h"
 
 /**
  * \brief Represents the game state on a particular turn.
@@ -38,7 +39,6 @@ class Position {
 		 */
 		Position(Board new_board, Board::Color new_side_to_move = Board::Color::cWhite, std::array<bool, 4> new_castling_rights = {true, true, true, true}, int new_ep_square = -1, int new_halfmove_clock = 0, int new_fullmove_counter = 0);
 		
-		
 		/// \return the board containing the piece placement.
 		Board get_board() const;
 		
@@ -62,6 +62,17 @@ class Position {
 		/// \return the fullmove counter.
 		int get_fullmove_counter() const;
 		
+		/**
+		 * \brief Updates the position with a given move.
+		 * 
+		 * This involves changing every aspect of the position.
+		 * For example, it will update the piece placement and swap which color is moving.
+		 * In a search tree, this function converts a parent node to a child node.
+		 * 
+		 * \param move the move being made.
+		 */
+		void make_move(Move move);
+
 	private:
 		/// \brief The piece placement of this position.
 		Board board;

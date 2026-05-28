@@ -10,6 +10,8 @@
  * Bits 3-0: special move flags
  * 
  * The special move flags indicate what type of move is being performed.
+ * 
+ * \todo Increase abstraction of move types to reduce bit twiddling in other classes.
  */
 class Move {	
 	public:

@@ -10,8 +10,6 @@
  * 
  * It is implemented here to expedite the testing process, as the format is much more
  * informationally concise than a grid printout or the raw data.
- * 
- * In the future, it will be mostly replaced by a proper protocol interface (likely UCI).
  */
 class Fen {
 	public:
