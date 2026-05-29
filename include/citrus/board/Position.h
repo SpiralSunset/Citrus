@@ -1,5 +1,6 @@
 #include "citrus/board/Board.h"
 #include "citrus/move/Move.h"
+#include <stack>
 
 /**
  * \brief Represents the game state on a particular turn.
@@ -20,6 +21,18 @@ class Position {
 			wQueen = 1,
 			bKing = 2,
 			bQueen = 3
+		};
+		
+		/**
+		 * \brief Information needed to unmake a move.
+		 * 
+		 * It is added and removed from the history stack with make_move() and unmake_move() respectively.
+		 */
+		struct UndoInfo {
+			Board::Piece cap_target;
+			std::array<bool, 4> castling_rights;
+			int ep_square;
+			int halfmove_clock;
 		};
 	
 		/**
@@ -72,6 +85,17 @@ class Position {
 		 * \param move the move being made.
 		 */
 		void make_move(Move move);
+		
+		/**
+		 * \brief Reverts the position to how it was before the last move.
+		 * 
+		 * This is the inverse of make_move().
+		 * Elements of a position that cannot be reversed are restored from a history stack.
+		 * In a search tree, this function reverts a child node to its parent node.
+		 * 
+		 * \param move the move being unmade.
+		 */
+		void unmake_move(Move move);
 
 	private:
 		/// \brief The piece placement of this position.
@@ -91,4 +115,7 @@ class Position {
 		
 		/// \brief Fullmove number, starting at 1 and incremented after each Black move.
 		int fullmove_counter;
+		
+		/// \brief Movement history to be restored with unmake_move().
+		std::stack<UndoInfo> history;
 };

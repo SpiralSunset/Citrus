@@ -47,6 +47,13 @@ void Position::make_move(Move move) {
 	Board::Piece moving = board.get_square(move.from());
 	int new_ep_square = -1;
 	bool is_capture = ((uint8_t)move.move_type() & (uint8_t)Move::MoveType::Capture);
+	Board::Piece cap_target = board.get_square(move.to());
+	
+	// Initializing the information to be stored in the history
+	UndoInfo undo_info;
+	undo_info.castling_rights = castling_rights;
+	undo_info.ep_square = ep_square;
+	undo_info.halfmove_clock = halfmove_clock;
 	
 	// Castling rights checker
 	if (moving.pt == Board::PieceType::King) {
@@ -75,15 +82,15 @@ void Position::make_move(Move move) {
 			board.remove_piece(target.pt, target.c, move.to());
 		} 
 		board.add_piece(static_cast<Board::PieceType>(Board::PieceType::Knight + ((uint8_t)move.move_type() & 0x3)), side_to_move, move.to());
-	} else if ((uint8_t)move.move_type() == (uint8_t)Move::MoveType::EpCapture) { // En passant behavior
+	} else if (move.move_type() == Move::MoveType::EpCapture) { // En passant behavior
 		int cap_square = move.to() + (side_to_move == Board::Color::cWhite ? -8 : 8);
-		Board::Piece cap_target = board.get_square(cap_square);
+		cap_target = board.get_square(cap_square);
 		board.remove_piece(cap_target.pt, cap_target.c, cap_square);
 		board.update(moving.pt, side_to_move, move.from(), move.to());
 	} else { // Every other kind of move
 		switch (move.move_type()) {
 			case Move::MoveType::DoublePawnPush:
-				new_ep_square = move.to() - (side_to_move == Board::Color::cWhite ? 8 : -8);
+				new_ep_square = move.to() + (side_to_move == Board::Color::cWhite ? -8 : 8);
 				break;
 			case Move::MoveType::KingCastle:
 				board.update(Board::PieceType::Rook, side_to_move, move.from() + 3, move.to() - 1);
@@ -94,6 +101,10 @@ void Position::make_move(Move move) {
 		}
 		board.update(moving.pt, side_to_move, move.from(), move.to(), is_capture);
 	}
+	
+	// Finalizing and pushing the information to be stored in the move history
+	undo_info.cap_target = cap_target;
+	history.push(undo_info);
 	
 	// Switching side and incrementing the fullmove counter after black turns
 	if (side_to_move == Board::Color::cWhite) {
@@ -113,4 +124,47 @@ void Position::make_move(Move move) {
 	// Clearing or updating the ep target square
 	ep_square = new_ep_square;
 	
+}
+
+void Position::unmake_move(Move move) {
+	UndoInfo undo_info = history.top();
+	history.pop();
+	
+	Board::Piece moving = board.get_square(move.to());
+	
+	// Reverts piece movement on board
+	int cap_square = move.to();
+	if ((uint8_t)move.move_type() & (uint8_t)Move::MoveType::KnightPromotion) {
+		board.remove_piece(moving.pt, moving.c, move.to());
+		board.add_piece(Board::PieceType::Pawn, moving.c, move.from());
+	} else {
+		switch(move.move_type()) {
+			case Move::MoveType::KingCastle:
+				board.update(Board::PieceType::Rook, moving.c, move.to() - 1, move.from() + 3);
+				break;
+			case Move::MoveType::QueenCastle:
+				board.update(Board::PieceType::Rook, moving.c, move.to() + 1, move.from() - 4);
+				break;
+			case Move::MoveType::EpCapture:
+				cap_square += (moving.c == Board::Color::cWhite ? -8 : 8);
+				break;
+		}
+		board.update(moving.pt, moving.c, move.to(), move.from());
+	}
+
+	// Restores captured piece if there was one
+	if ((uint8_t)move.move_type() & (uint8_t)Move::MoveType::Capture) {
+		board.add_piece(undo_info.cap_target.pt, undo_info.cap_target.c, cap_square);
+	}
+	
+	// Reverts the rest of the position information
+	if (side_to_move == Board::Color::cWhite) {
+		side_to_move = Board::Color::cBlack;
+		fullmove_counter--;
+	} else if (side_to_move == Board::Color::cBlack) {
+		side_to_move = Board::Color::cWhite;
+	}
+	castling_rights = undo_info.castling_rights;
+	ep_square = undo_info.ep_square;
+	halfmove_clock = undo_info.halfmove_clock;
 }

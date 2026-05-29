@@ -1,5 +1,9 @@
 #include "citrus/move/Move.h"
 
+Move::Move() {
+	raw_move = 0xFF;
+}	
+
 Move::Move(int from, int to, MoveType move_type) {
 	raw_move = (from << 10) | (to << 4) | (uint8_t)move_type;
 }

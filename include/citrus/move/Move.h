@@ -38,6 +38,13 @@ class Move {
 		};
 		
 		/**
+		 * \brief Creates an invalid move.
+		 * 
+		 * The raw data is 0xFF. Both from() and to() will return -1.
+		 */
+		Move();
+		
+		/**
 		 * \brief Creates a move from the given information.
 		 * 
 		 * \param from where the piece is moving from.
