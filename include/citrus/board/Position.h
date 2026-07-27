@@ -1,3 +1,5 @@
+#pragma once
+
 #include "citrus/board/Board.h"
 #include "citrus/move/Move.h"
 #include <stack>
@@ -57,6 +59,9 @@ class Position {
 		
 		/// \return the side whose turn it is to move.
 		Board::Color get_side_to_move() const;
+		
+		/// \return the side who will be moving after the current turn is complete.
+		Board::Color get_next_to_move() const;
 		
 		/**
 		 * \brief Retrieves whether a condition that allows castling is true.

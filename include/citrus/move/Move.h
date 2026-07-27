@@ -17,6 +17,8 @@ class Move {
 	public:
 		/**
 		 * \brief The types of moves as represented in the special move flags.
+		 * 
+		 * Occasionally, KnightPromotion and KnightPromotionCapture will be used to represent their respective promotion type generally.
 		 */
 		enum class MoveType : std::uint8_t {
 			Quiet = 0,

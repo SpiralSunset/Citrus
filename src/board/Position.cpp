@@ -27,6 +27,11 @@ Board::Color Position::get_side_to_move() const {
 	return side_to_move;
 }
 
+Board::Color Position::get_next_to_move() const {
+	if (side_to_move == Board::Color::cWhite) return Board::Color::cBlack;
+	return Board::Color::cWhite;
+}
+
 bool Position::get_castling_right(Position::CastlingRight cr) const {
 	return castling_rights[(uint8_t)cr];
 }
