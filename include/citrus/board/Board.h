@@ -18,9 +18,6 @@
  * One weakness of a pure bitboard representation is that it is not optimized for direct
  * piece lookup by square. For this reason, an auxiliary square-centric board representation is
  * maintained as well.
- * 
- * \todo Replace enums with strongly typed enum classes.
- * \todo Static default piece positions, to be used in castling-related calculations.
  */
 class Board {
 	public:

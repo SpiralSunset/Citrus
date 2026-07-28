@@ -12,7 +12,7 @@
  * Legal moves exclude options that would leave their king in check within the resulting Position.
  * Pseudo-legal moves do not do this, and are consequently faster to calculate.
  * 
- * \todo Implement legal move generation.
+ * \todo Extensive Perft testing to ensure flawless generation.
  */
 class MoveGenerator {
 	public:
@@ -38,7 +38,21 @@ class MoveGenerator {
 		 * \return the list of all pseudo-legal moves.
 		 */
 		std::array<Move, 256> gen_pseudo_legal_moves(Position pos, uint64_t occ);
-
+		
+		/**
+		 * \brief Evaluates whether the opposing king is currently in check.
+		 * 
+		 * This is done from the perspective of the player whose turn it is to move.
+		 * For example, if the current side to move is white, the black king's status will be returned.
+		 * 
+		 * It is primarily used to check if a pseudo-legal move is legal.
+		 * 
+		 * \param pos the position to be searched.
+		 * \param occ the set of all occupied spaces on the board.
+		 * \param last_move_type the last type of move made.
+		 * \return whether the opposing king is in check.
+		 */
+		bool is_opposing_king_in_check(Position pos, uint64_t occ, Move::MoveType last_move_type);
 
 	private:
 		/// \brief All possible knight moves indexed by square.
