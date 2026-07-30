@@ -7,11 +7,11 @@ It is being worked on as the subject of my Honors Capstone Project.
 
 Currently, Citrus is in early development. It is not currently functional.
 
-Current progress:
+Current progress towards functionality:
 - [x] Basic project structure
 - [x] Board representation
 - [x] Make/unmake moves
-- [ ] Move generation
+- [x] Move generation
 - [ ] Search
 - [ ] Evaluation
 - [ ] UCI Support

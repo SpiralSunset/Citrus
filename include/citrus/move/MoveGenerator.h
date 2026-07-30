@@ -1,4 +1,7 @@
+#pragma once
+
 #include "citrus/board/Position.h"
+#include "citrus/move/MoveList.h"
 #include <cstdint>
 #include <array>
 
@@ -20,24 +23,14 @@ class MoveGenerator {
 		 * \brief Creates a move generator and populates the movement tables for non-sliding pieces.
 		 */
 		MoveGenerator();
-
-		/**
-		 * \brief Gets the size of the last pseudo-legal move list.
-		 * 
-		 * \return the list size.
-		 * 
-		 * \todo Refine naming and/or implementation.
-		 */
-		int get_last_idx();
 		
 		/**
 		 * \brief Generates all possible pseudo-legal moves from a given position.
 		 * 
 		 * \param pos the position to be searched.
-		 * \param occ the set of all occupied spaces on the board.
-		 * \return the list of all pseudo-legal moves.
+		 * \param moves the list of moves to be written to.
 		 */
-		std::array<Move, 256> gen_pseudo_legal_moves(Position pos, uint64_t occ);
+		void gen_pseudo_legal_moves(Position &pos, MoveList &moves);
 		
 		/**
 		 * \brief Evaluates whether the opposing king is currently in check.
@@ -48,11 +41,10 @@ class MoveGenerator {
 		 * It is primarily used to check if a pseudo-legal move is legal.
 		 * 
 		 * \param pos the position to be searched.
-		 * \param occ the set of all occupied spaces on the board.
 		 * \param last_move_type the last type of move made.
 		 * \return whether the opposing king is in check.
 		 */
-		bool is_opposing_king_in_check(Position pos, uint64_t occ, Move::MoveType last_move_type);
+		bool is_opposing_king_in_check(Position &pos, Move::MoveType last_move_type);
 
 	private:
 		/// \brief All possible knight moves indexed by square.
@@ -102,15 +94,10 @@ class MoveGenerator {
 		/**
 		 * \brief Appends moves of a specific type to a list of moves.
 		 * 
-		 * \param out reference to a list of moves.
-		 * \param out_idx reference to the current size of the move list.
+		 * \param moves the list of moves to be written to.
 		 * \param sq the square index of the piece being moved.
 		 * \param targets the bitboard containing every location the moved piece can go to.
 		 * \param move_type the type of move to be made.
 		 */
-		void append_moves(std::array<Move, 256> &out, int &out_idx, int sq, uint64_t targets, Move::MoveType move_type);
-		
-		
-		/// \brief the size of the last generated pseudo-legal move list.
-		int last_idx = 0;
+		void append_moves(MoveList &moves, int sq, uint64_t targets, Move::MoveType move_type);
 };
