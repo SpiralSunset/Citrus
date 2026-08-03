@@ -14,8 +14,6 @@
  * There are two kinds of move generation.
  * Legal moves exclude options that would leave their king in check within the resulting Position.
  * Pseudo-legal moves do not do this, and are consequently faster to calculate.
- * 
- * \todo Extensive Perft testing to ensure flawless generation.
  */
 class MoveGenerator {
 	public:
@@ -45,7 +43,7 @@ class MoveGenerator {
 		 * \return whether the opposing king is in check.
 		 */
 		bool is_opposing_king_in_check(Position &pos, Move::MoveType last_move_type);
-
+		
 	private:
 		/// \brief All possible knight moves indexed by square.
 		std::array<uint64_t, 64> knight_moves;

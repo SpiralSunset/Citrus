@@ -79,12 +79,21 @@ void Position::make_move(Move move) {
 		}
 	}
 	
+	if (is_capture && cap_target.pt == Board::PieceType::Rook) {
+		if (cap_target.c == Board::Color::cWhite) {
+			if (move.to() == 0) castling_rights[(uint8_t)Position::CastlingRight::wQueen] = false;
+			else if (move.to() == 7)  castling_rights[(uint8_t)Position::CastlingRight::wKing] = false;
+		} else if (cap_target.c == Board::Color::cBlack) {
+			if (move.to() == 56) castling_rights[(uint8_t)Position::CastlingRight::bQueen] = false;
+			else if (move.to() == 63)  castling_rights[(uint8_t)Position::CastlingRight::bKing] = false;
+		}
+	}
+	
 	// Board updating
 	if ((uint8_t)move.move_type() & (uint8_t)Move::MoveType::KnightPromotion) { // Promotion behavior
 		board.remove_piece(moving.pt, side_to_move, move.from());
 		if (is_capture) {
-			Board::Piece target = board.get_square(move.to());
-			board.remove_piece(target.pt, target.c, move.to());
+			board.remove_piece(cap_target.pt, cap_target.c, move.to());
 		} 
 		board.add_piece(static_cast<Board::PieceType>(Board::PieceType::Knight + ((uint8_t)move.move_type() & 0x3)), side_to_move, move.to());
 	} else if (move.move_type() == Move::MoveType::EpCapture) { // En passant behavior
@@ -128,7 +137,6 @@ void Position::make_move(Move move) {
 	
 	// Clearing or updating the ep target square
 	ep_square = new_ep_square;
-	
 }
 
 void Position::unmake_move(Move move) {

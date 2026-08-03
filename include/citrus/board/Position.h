@@ -12,6 +12,8 @@
  * of black turns that have occurred since the game's beginning.
  * 
  * Essentially, it is the game at a specific moment.
+ * 
+ * \todo Add function for retrieving occupancy
  */
 class Position {
 	public:

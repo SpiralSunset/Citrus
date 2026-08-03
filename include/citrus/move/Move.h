@@ -44,7 +44,7 @@ class Move {
 		/**
 		 * \brief Creates an invalid move.
 		 * 
-		 * The raw data is 0xFF. Both from() and to() will return -1.
+		 * The raw data is 0xFFFF. Both from() and to() will return -1.
 		 */
 		Move();
 		
@@ -65,6 +65,13 @@ class Move {
 		
 		/// \return the type of move being performed.
 		MoveType move_type() const;
+		
+		/**
+		 * \brief Returns a string with information about the move.
+		 * 
+		 * This is to be exclusively used for debugging.
+		 */
+		std::string to_string();
 		
 	private:
 		/// \brief The 16 bit word that stores the move.

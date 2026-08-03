@@ -89,34 +89,35 @@ void MoveGenerator::append_moves(MoveList &moves, int sq, uint64_t targets, Move
 void MoveGenerator::gen_pseudo_legal_moves(Position &pos, MoveList &moves) {
 	moves.clear();
 	
+	uint64_t friendly_occ = pos.get_board().get_piece_set(pos.get_side_to_move());
 	uint64_t opposing_occ = pos.get_board().get_piece_set(pos.get_next_to_move());
-	uint64_t occ = pos.get_board().get_piece_set(pos.get_side_to_move()) | opposing_occ;
+	uint64_t occ = friendly_occ | opposing_occ;
 	
 	// Pawns
 	uint64_t pawns = pos.get_board().get_piece_set(Board::PieceType::Pawn, pos.get_side_to_move());
 	while (pawns) {
 		int sq = pop_lsb(pawns);
 		uint64_t sq_bb = 1ULL << sq;
-		uint64_t single_push;
-		uint64_t double_push;
-		uint64_t promotion;
-		uint64_t captures;
-		uint64_t promotion_captures;
-		uint64_t ep_capture;
+		uint64_t single_push = 0ULL;
+		uint64_t double_push = 0ULL;
+		uint64_t promotion = 0ULL;
+		uint64_t captures = 0ULL;
+		uint64_t promotion_captures = 0ULL;
+		uint64_t ep_capture = 0ULL;
 		if (pos.get_side_to_move() == Board::Color::cWhite) {
 			single_push = ((sq_bb << 8) & ~occ) & ~RANK_8;
 			double_push = ((((sq_bb & RANK_2) << 8) & ~occ) << 8) & ~occ;
 			promotion = ((sq_bb << 8) & ~occ) & RANK_8;
 			captures = pawn_attacks[Board::Color::cWhite][sq] & pos.get_board().get_piece_set(Board::Color::cBlack) & ~RANK_8;
 			promotion_captures = pawn_attacks[Board::Color::cWhite][sq] & pos.get_board().get_piece_set(Board::Color::cBlack) & RANK_8;
-			ep_capture = pawn_attacks[Board::Color::cWhite][sq] & (1ULL << pos.get_ep_square());
+			if (pos.get_ep_square() != -1) ep_capture = pawn_attacks[Board::Color::cWhite][sq] & (1ULL << pos.get_ep_square());
 		} else {
 			single_push = ((sq_bb >> 8) & ~occ) & ~RANK_1;
 			double_push = ((((sq_bb & RANK_7) >> 8) & ~occ) >> 8) & ~occ;
 			promotion = ((sq_bb >> 8) & ~occ) & RANK_1;
 			captures = pawn_attacks[Board::Color::cBlack][sq] & pos.get_board().get_piece_set(Board::Color::cWhite) & ~RANK_1;
 			promotion_captures = pawn_attacks[Board::Color::cBlack][sq] & pos.get_board().get_piece_set(Board::Color::cWhite) & RANK_1;
-			ep_capture = pawn_attacks[Board::Color::cBlack][sq] & (1ULL << pos.get_ep_square());
+			if (pos.get_ep_square() != -1) ep_capture = pawn_attacks[Board::Color::cBlack][sq] & (1ULL << pos.get_ep_square());
 		}
 		append_moves(moves, sq, single_push, Move::MoveType::Quiet);
 		append_moves(moves, sq, double_push, Move::MoveType::DoublePawnPush);
@@ -138,7 +139,7 @@ void MoveGenerator::gen_pseudo_legal_moves(Position &pos, MoveList &moves) {
 	uint64_t bishops = pos.get_board().get_piece_set(Board::PieceType::Bishop, pos.get_side_to_move());
 	while (bishops) {
 		int sq = pop_lsb(bishops);
-		uint64_t attacks = get_bishop_attacks(sq, occ);
+		uint64_t attacks = get_bishop_attacks(sq, occ) & ~friendly_occ;
 		append_moves(moves, sq, attacks & ~occ, Move::MoveType::Quiet);
 		append_moves(moves, sq, attacks & opposing_occ, Move::MoveType::Capture);
 	}
@@ -147,7 +148,7 @@ void MoveGenerator::gen_pseudo_legal_moves(Position &pos, MoveList &moves) {
 	uint64_t rooks = pos.get_board().get_piece_set(Board::PieceType::Rook, pos.get_side_to_move());
 	while (rooks) {
 		int sq = pop_lsb(rooks);
-		uint64_t attacks = get_rook_attacks(sq, occ);
+		uint64_t attacks = get_rook_attacks(sq, occ) & ~friendly_occ;
 		append_moves(moves, sq, attacks & ~occ, Move::MoveType::Quiet);
 		append_moves(moves, sq, attacks & opposing_occ, Move::MoveType::Capture);
 	}
@@ -156,7 +157,7 @@ void MoveGenerator::gen_pseudo_legal_moves(Position &pos, MoveList &moves) {
 	uint64_t queens = pos.get_board().get_piece_set(Board::PieceType::Queen, pos.get_side_to_move());
 	while (queens) {
 		int sq = pop_lsb(queens);
-		uint64_t attacks = (get_bishop_attacks(sq, occ) | get_rook_attacks(sq, occ));
+		uint64_t attacks = (get_bishop_attacks(sq, occ) | get_rook_attacks(sq, occ)) & ~friendly_occ;
 		append_moves(moves, sq, attacks & ~occ, Move::MoveType::Quiet);
 		append_moves(moves, sq, attacks & opposing_occ, Move::MoveType::Capture);
 	}

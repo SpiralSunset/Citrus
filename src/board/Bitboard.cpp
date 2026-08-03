@@ -2,7 +2,7 @@
 #include <cstdint>
 
 int popcount(uint64_t bb) {
-	return __builtin_popcount(bb);
+	return __builtin_popcountll(bb);
 }
 
 int pop_lsb(uint64_t &bb) {

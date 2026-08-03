@@ -12,8 +12,8 @@ Current progress towards functionality:
 - [x] Board representation
 - [x] Make/unmake moves
 - [x] Move generation
-- [ ] Search
-- [ ] Evaluation
+- [x] Search
+- [x] Evaluation
 - [ ] UCI Support
 
 ## Build Instructions

@@ -1,6 +1,7 @@
 #include "citrus/board/Board.h"
 #include "citrus/board/Bitboard.h"
 #include <algorithm>
+#include <iostream>
 
 Board::Board() {
 	pieces = {
