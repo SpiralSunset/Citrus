@@ -70,8 +70,19 @@ class Move {
 		 * \brief Returns a string with information about the move.
 		 * 
 		 * This is to be exclusively used for debugging.
+		 * 
+		 * \return move string.
 		 */
 		std::string to_string();
+		
+		/**
+		 * \brief Returns a string representing the move in UCI format.
+		 * 
+		 * This notation is similar to Extended Algebraic Notation, but does not denote piece types or captures.
+		 * 
+		 * \return UCI format move string.
+		 */
+		std::string to_uci();
 		
 	private:
 		/// \brief The 16 bit word that stores the move.

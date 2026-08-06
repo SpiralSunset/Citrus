@@ -186,56 +186,61 @@ void MoveGenerator::gen_pseudo_legal_moves(Position &pos, MoveList &moves) {
 	}
 }
 
-bool MoveGenerator::is_opposing_king_in_check(Position &pos, Move::MoveType last_move_type) {
-	uint64_t opp_king_bb;
+bool MoveGenerator::is_side_in_check(Position &pos, Move::MoveType last_move_type, Board::Color side) {
+	uint64_t king_bb;
 	uint64_t occ = pos.get_board().get_piece_set(Board::Color::cWhite) | pos.get_board().get_piece_set(Board::Color::cBlack);
+	
+	Board::Color opp_side;
+	if (side == Board::Color::cWhite) opp_side = Board::Color::cBlack;
+	else opp_side = Board::Color::cWhite;
+	
 	// Increases the spaces being evaluated in accordance to castling rules
 	if (last_move_type == Move::MoveType::KingCastle) {
-		if (pos.get_next_to_move() == Board::Color::cWhite) {
-			opp_king_bb = 0x0000000000000070;
+		if (side == Board::Color::cWhite) {
+			king_bb = 0x0000000000000070;
 		} else {
-			opp_king_bb = 0x7000000000000000;
+			king_bb = 0x7000000000000000;
 		}
 	} else if (last_move_type == Move::MoveType::QueenCastle) {
-		if (pos.get_next_to_move() == Board::Color::cWhite) {
-			opp_king_bb = 0x000000000000001E;
+		if (side == Board::Color::cWhite) {
+			king_bb = 0x000000000000001E;
 		} else {
-			opp_king_bb = 0x1E00000000000000;
+			king_bb = 0x1E00000000000000;
 		}
 	} else {
-		opp_king_bb = pos.get_board().get_piece_set(Board::PieceType::King, pos.get_next_to_move());
+		king_bb = pos.get_board().get_piece_set(Board::PieceType::King, side);
 	}
 	
-	uint64_t pawns = pos.get_board().get_piece_set(Board::PieceType::Pawn, pos.get_side_to_move());
+	uint64_t pawns = pos.get_board().get_piece_set(Board::PieceType::Pawn, opp_side);
 	while (pawns) {
 		int sq = pop_lsb(pawns);
-		if (opp_king_bb & pawn_attacks[pos.get_side_to_move()][sq]) return true;
+		if (king_bb & pawn_attacks[opp_side][sq]) return true;
 	}
 	
-	uint64_t knights = pos.get_board().get_piece_set(Board::PieceType::Knight, pos.get_side_to_move());
+	uint64_t knights = pos.get_board().get_piece_set(Board::PieceType::Knight, opp_side);
 	while (knights) {
 		int sq = pop_lsb(knights);
-		if (opp_king_bb & knight_moves[sq]) return true;
+		if (king_bb & knight_moves[sq]) return true;
 	}
 
-	uint64_t king = pos.get_board().get_piece_set(Board::PieceType::King, pos.get_side_to_move());
+	uint64_t king = pos.get_board().get_piece_set(Board::PieceType::King, opp_side);
 	while (king) {
 		int sq = pop_lsb(king);
-		if (opp_king_bb & king_moves[sq]) return true;
+		if (king_bb & king_moves[sq]) return true;
 	}
 	
-	uint64_t queens = pos.get_board().get_piece_set(Board::PieceType::Queen, pos.get_side_to_move());
+	uint64_t queens = pos.get_board().get_piece_set(Board::PieceType::Queen, opp_side);
 	
-	uint64_t diagonal_sliding = pos.get_board().get_piece_set(Board::PieceType::Bishop, pos.get_side_to_move()) | queens;
+	uint64_t diagonal_sliding = pos.get_board().get_piece_set(Board::PieceType::Bishop, opp_side) | queens;
 	while (diagonal_sliding) {
 		int sq = pop_lsb(diagonal_sliding);
-		if (opp_king_bb & get_bishop_attacks(sq, occ)) return true;
+		if (king_bb & get_bishop_attacks(sq, occ)) return true;
 	}
 	
-	uint64_t orthagonal_sliding = pos.get_board().get_piece_set(Board::PieceType::Rook, pos.get_side_to_move()) | queens;
+	uint64_t orthagonal_sliding = pos.get_board().get_piece_set(Board::PieceType::Rook, opp_side) | queens;
 	while (orthagonal_sliding) {
 		int sq = pop_lsb(orthagonal_sliding);
-		if (opp_king_bb & get_rook_attacks(sq, occ)) return true;
+		if (king_bb & get_rook_attacks(sq, occ)) return true;
 	}
 	
 	return false;

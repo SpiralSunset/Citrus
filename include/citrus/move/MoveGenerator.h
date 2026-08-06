@@ -31,18 +31,16 @@ class MoveGenerator {
 		void gen_pseudo_legal_moves(Position &pos, MoveList &moves);
 		
 		/**
-		 * \brief Evaluates whether the opposing king is currently in check.
+		 * \brief Evaluates whether the side's king is currently in check.
 		 * 
-		 * This is done from the perspective of the player whose turn it is to move.
-		 * For example, if the current side to move is white, the black king's status will be returned.
-		 * 
-		 * It is primarily used to check if a pseudo-legal move is legal.
+		 * Primarily used for ensuring legal moves and finding checkmates.
 		 * 
 		 * \param pos the position to be searched.
 		 * \param last_move_type the last type of move made.
-		 * \return whether the opposing king is in check.
+		 * \param side the side that is being examined.
+		 * \return whether the side's king is in check.
 		 */
-		bool is_opposing_king_in_check(Position &pos, Move::MoveType last_move_type);
+		bool is_side_in_check(Position &pos, Move::MoveType last_move_type, Board::Color side);
 		
 	private:
 		/// \brief All possible knight moves indexed by square.

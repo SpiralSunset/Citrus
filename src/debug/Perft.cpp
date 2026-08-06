@@ -17,7 +17,7 @@ uint64_t Perft::run(Position &pos, MoveGenerator &mg, std::array<MoveList, MAX_S
 	int num_moves = list_stack[depth].get_size();
 	for (int i = 0; i < num_moves; i++) {
 		pos.make_move(list_stack[depth][i]);
-		if (!mg.is_opposing_king_in_check(pos, list_stack[depth][i].move_type())) {
+		if (!mg.is_side_in_check(pos, list_stack[depth][i].move_type(), pos.get_next_to_move())) {
 			nodes += run(pos, mg, list_stack, depth-1);
 		}
 		pos.unmake_move(list_stack[depth][i]);
@@ -31,7 +31,7 @@ void Perft::divide(Position &pos, MoveGenerator &mg, int depth) {
 	int num_moves = list_stack[depth].get_size();
 	for (int i = 0; i < num_moves; i++) {
 		pos.make_move(list_stack[depth][i]);
-		if (!mg.is_opposing_king_in_check(pos, list_stack[depth][i].move_type())) {
+		if (!mg.is_side_in_check(pos, list_stack[depth][i].move_type(), pos.get_next_to_move())) {
 			std::cout << square_to_uci(list_stack[depth][i].from()) << square_to_uci(list_stack[depth][i].to()) << ": " << run(pos, mg, list_stack, depth-1) << "\n";
 		}
 		pos.unmake_move(list_stack[depth][i]);
