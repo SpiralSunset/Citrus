@@ -4,5 +4,3 @@ libs/
 test/
 
 *.geany
-
-CMakeLists.txt

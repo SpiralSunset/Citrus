@@ -131,8 +131,8 @@ void UCI::handle_go(std::istringstream &iss) {
 	searcher.settings = settings;
 	
 	// Starts the search thread and outputs the result when it's done
-	search_thread = std::thread([this] {
-		best_move = searcher.find_best_move(position);
+	search_thread = std::thread([this, copy_pos = position] {
+		best_move = searcher.find_best_move(copy_pos);
 		std::cout << "bestmove " << best_move.to_uci() << std::endl;
 	});
 	

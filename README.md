@@ -5,21 +5,20 @@ It is being worked on as the subject of my Honors Capstone Project.
 
 ## Status
 
-Currently, Citrus is in early development. It is not currently functional.
+Citrus is in stage 2 of development. It will continue being worked on for the remainder of August 2026.
 
-Current progress towards functionality:
-- [x] Basic project structure
-- [x] Board representation
-- [x] Make/unmake moves
-- [x] Move generation
-- [x] Search
-- [x] Evaluation
-- [ ] UCI Support
+Here are some planned additions for the near future, in no particular order:
+- [ ] Iterative deepening and transposition table
+- [ ] Quiescence search
+- [ ] Mate search
+- [ ] Magic bitboards
+- [ ] Time managing
+- [ ] Opening book
+- [ ] Improved UCI Support
 
 ## Build Instructions
 
-The project does not fully build/run yet.
-Eventually, the build commands will be:
+To build Citrus from source, run these commands from the root directory:
 
 ```bash
 cmake -S . -B build
@@ -31,7 +30,7 @@ This will require installing cmake.
 ## Documentation
 
 Citrus uses Doxygen to generate documentation.
-Eventually, the command to do this will be:
+To build the html documentation, run this:
 
 ```bash
 cmake --build build --target docs
