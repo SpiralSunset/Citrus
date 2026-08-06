@@ -25,12 +25,13 @@ target_include_directories(Citrus
 find_package(Doxygen)
 
 if(DOXYGEN_FOUND)
-    set(DOXYGEN_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/docs")
+    set(DOXYGEN_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/docs")
     set(DOXYGEN_EXTRACT_ALL YES)
     set(DOXYGEN_BUILTIN_STL_SUPPORT YES)
     set(DOXYGEN_GENERATE_HTML YES)
     set(DOXYGEN_PROJECT_LOGO "${CMAKE_CURRENT_SOURCE_DIR}/citrus_icon_detailed.png")
     set(DOXYGEN_PROJECT_ICON "${CMAKE_CURRENT_SOURCE_DIR}/citrus_icon_detailed.png")
+    set(DOXYGEN_USE_MDFILE_AS_MAINPAGE README.md)
 
     doxygen_add_docs(
         docs

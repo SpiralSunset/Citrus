@@ -25,7 +25,7 @@ class MoveList {
 		/**
 		 * \brief Gets the size of the list.
 		 * 
-		 * \param the size of the list.
+		 * \return the size of the list.
 		 */
 		int get_size();
 		
