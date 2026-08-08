@@ -1,5 +1,6 @@
 #include "citrus/search/Evaluation.h"
 #include "citrus/board/Bitboard.h"
+#include <iostream>
 
 // Piece-Square Table values taken from Ronald Friederich's PeSTO
 namespace {
@@ -196,10 +197,10 @@ int Evaluation::evaluate(Position &pos) {
 	
 	int phase = 0;
 	
-	for (int i = Board::PieceType::Pawn; i <= Board::PieceType::King; i++) {
-		Board::PieceType pt = static_cast<Board::PieceType>(i);
-		phase -= phase_weight(pt) * popcount(pos.get_board().get_piece_set(pt));
-	}
+	//for (int i = Board::PieceType::Pawn; i <= Board::PieceType::King; i++) {
+		//Board::PieceType pt = static_cast<Board::PieceType>(i);
+		//phase -= phase_weight(pt) * popcount(pos.get_board().get_piece_set(pt));
+	//}
 	
 	uint64_t occ = pos.get_board().get_piece_set(Board::Color::cWhite) | pos.get_board().get_piece_set(Board::Color::cBlack);
 	while (occ) {
@@ -211,16 +212,23 @@ int Evaluation::evaluate(Position &pos) {
 			mg_score += (value + mg_table[piece.pt-2][sq]);
 			eg_score += (value + eg_table[piece.pt-2][sq]);
 		} else {
-			mg_score -= (value + mg_table[piece.pt-2][63-sq]);
-			eg_score -= (value + eg_table[piece.pt-2][63-sq]);
+			mg_score -= (value + mg_table[piece.pt-2][sq^56]);
+			eg_score -= (value + eg_table[piece.pt-2][sq^56]);
 		}
 		
 		phase += phase_weight(piece.pt);
 	}
 	
 	// Interpolates between the position value in the midgame and the endgame.
-	int score = mg_score * phase + eg_score * (TOTAL_PHASE - phase) / TOTAL_PHASE;
+	int score = (mg_score * phase + eg_score * (TOTAL_PHASE - phase)) / TOTAL_PHASE;
 	
 	if (pos.get_side_to_move() == Board::Color::cBlack) score = -score;
+	
+	//std::cout << "mg_score = " << mg_score << std::endl;
+	//std::cout << "eg_score = " << eg_score << std::endl;
+	//std::cout << "phase = " << phase << std::endl;
+	//std::cout << "score = " << score << std::endl;
+	
+
 	return score;
 }

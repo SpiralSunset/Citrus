@@ -84,6 +84,14 @@ class Move {
 		 */
 		std::string to_uci();
 		
+		/**
+		 * \brief Determines whether another move is the same as this one.
+		 * 
+		 * \param other the other move.
+		 * \return whether the move is the same.
+		 */
+		bool equals(Move other);
+		
 	private:
 		/// \brief The 16 bit word that stores the move.
 		uint16_t raw_move;

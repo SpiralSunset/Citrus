@@ -26,7 +26,7 @@ namespace Evaluation {
 	constexpr int phase_weight(Board::PieceType pt);
 	
 	/// \brief The phase value when no pieces have been captured yet.
-	constexpr int TOTAL_PHASE = 24;
+	constexpr int TOTAL_PHASE = 32;
 	
 	/**
 	 * \brief Evaluates the value of a given position.

@@ -63,7 +63,7 @@ class UCI {
 		/**
 		 * \brief Starts UCI mode with standard io.
 		 * 
-		 * Should be started by running "./Citrus UCI"
+		 * Should be started by running "./Citrus"
 		 */
 		void run();
 };
