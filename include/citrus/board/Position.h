@@ -2,6 +2,7 @@
 
 #include "citrus/board/Board.h"
 #include "citrus/move/Move.h"
+#include "citrus/board/Zobrist.h"
 #include <stack>
 
 /**
@@ -37,6 +38,7 @@ class Position {
 			std::array<bool, 4> castling_rights;
 			int ep_square;
 			int halfmove_clock;
+			uint64_t hash;
 		};
 	
 		/**
@@ -82,6 +84,16 @@ class Position {
 		/// \return the fullmove counter.
 		int get_fullmove_counter() const;
 		
+		/// \return the zobrist hash.
+		uint64_t get_zobrist_key() const;
+		
+		/**
+		 * \brief Creates the zobrist hash for the current position.
+		 * 
+		 * For more information, see Zobrist.
+		 */
+		void create_hash();
+		
 		/**
 		 * \brief Updates the position with a given move.
 		 * 
@@ -123,6 +135,49 @@ class Position {
 		/// \brief Fullmove number, starting at 1 and incremented after each Black move.
 		int fullmove_counter;
 		
+		/// \brief Current zobrist hash.
+		uint64_t hash;
+		
+		/// \brief Responsible for generating the zobrist hash.
+		Zobrist zobrist;
+		
 		/// \brief Movement history to be restored with unmake_move().
 		std::stack<UndoInfo> history;
+		
+		/**
+		 * \brief Disables a castling right on both board representations.
+		 * 
+		 * \param cr the castling right in question.
+		 */
+		void disable_castling_right(CastlingRight cr);
+		
+		/**
+		 * \brief Adds a piece to both board representations.
+		 * 
+		 * \param pt the piece type.
+		 * \param c the color.
+		 * \param sq the square index.
+		 */
+		void add_piece(Board::PieceType pt, Board::Color c, int sq);
+		
+		/**
+		 * \brief Removes a piece from both board representations.
+		 * 
+		 * \param pt the piece type.
+		 * \param c the color.
+		 * \param sq the square index.
+		 */
+		void remove_piece(Board::PieceType pt, Board::Color c, int sq);
+		
+		/**
+		 * \brief Updates a piece on both board representations.
+		 * 
+		 * This is slightly faster than calling add_piece() and remove_piece() consecutively, so it should be used where possible.
+		 * 
+		 * \param pt the piece type.
+		 * \param c the color.
+		 * \param sq the square index.
+		 * \param capture whether the moving piece is capturing another piece.
+		 */
+		void update(Board::PieceType pt, Board::Color c, int from, int to, bool capture = false);
 };

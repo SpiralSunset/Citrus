@@ -64,3 +64,7 @@ std::string Move::to_uci() {
 bool Move::equals(Move other) {
 	return this->raw_move == other.raw_move;
 }
+
+bool Move::is_valid() {
+	return raw_move != 0xFFFF;
+}

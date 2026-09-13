@@ -1,4 +1,5 @@
 #include "citrus/move/MoveGenerator.h"
+#include "citrus/search/TTable.h"
 #include <chrono>
 #include <atomic>
 
@@ -69,7 +70,7 @@ class Searcher {
 		 * 
 		 * \param stopper reference to the search stopping flag.
 		 */
-		Searcher(std::atomic<bool> &stopper) : stopping(stopper) {}
+		Searcher(std::atomic<bool> &stopper) : stopping(stopper), ttable(1 << 22) {}
 		
 		/**
 		 * \brief Determines whether a evaluation score indicates checkmate.
@@ -93,6 +94,7 @@ class Searcher {
 		 * 
 		 * From highest to lowest, the move priority is:
 		 * - Ply move from previous iteration (not handled here)
+		 * - Best move from the transposition table
 		 * - Is a capture
 		 * - Everything else
 		 * 
@@ -101,7 +103,7 @@ class Searcher {
 		 * \param move the move to be scored.
 		 * \return the score.
 		 */
-		int move_order_score(Move move);
+		int move_order_score(Move move, Move tt_best);
 		
 		/**
 		 * \brief Picks a move from a MoveList with the highest chance of being good.
@@ -117,7 +119,7 @@ class Searcher {
 		 * \param ply current ply of the search, to compare to the pv table.
 		 * \return the highest priority move from the list.
 		 */
-		Move pick_move(MoveList &move_list, int move_idx, int ply);
+		Move pick_move(MoveList &move_list, int move_idx, int ply, Move tt_best);
 		
 		/**
 		 * \brief Finds the ideal move that can be made from a given position.
@@ -129,6 +131,8 @@ class Searcher {
 		 * The following optimizations are in use:
 		 * - Alpha-beta pruning
 		 * - Iterative deepening
+		 * - Move ordering
+		 * - Transposition table
 		 * 
 		 * \param pos the current position of the game.
 		 * \return the best move that can be made.
@@ -162,6 +166,9 @@ class Searcher {
 		
 		/// \brief Length of previous_pv.
 		int previous_pv_length;
+		
+		/// \brief The transposition table.
+		TTable ttable;
 			
 		/**
 		 * \brief Recursive search to find the highest-value move from a position.

@@ -1,4 +1,5 @@
 #include "citrus/board/Position.h"
+#include "citrus/board/Bitboard.h"
 #include <algorithm>
 
 Position::Position() {
@@ -7,6 +8,7 @@ Position::Position() {
 	ep_square = -1;
 	halfmove_clock = 0;
 	fullmove_counter = 0;
+	create_hash();
 }
 
 Position::Position(Board new_board, Board::Color new_side_to_move, std::array<bool, 4> new_castling_rights, int new_ep_square, int new_halfmove_clock, int new_fullmove_counter) {
@@ -16,6 +18,7 @@ Position::Position(Board new_board, Board::Color new_side_to_move, std::array<bo
 	ep_square = new_ep_square;
 	halfmove_clock = new_halfmove_clock;
 	fullmove_counter = new_fullmove_counter;
+	create_hash();
 }
 
 
@@ -48,6 +51,32 @@ int Position::get_fullmove_counter() const {
 	return fullmove_counter;
 }
 
+uint64_t Position::get_zobrist_key() const {
+	return hash;
+}
+
+void Position::create_hash() {
+	hash = 0ULL;
+	
+	for (int i = 0; i < 12; i++) {
+		Board::PieceType pt = static_cast<Board::PieceType>((i%6)+2);
+		Board::Color c = static_cast<Board::Color>(i/6);
+		uint64_t bb = board.get_piece_set(pt, c);
+		while (bb) {
+			int sq = pop_lsb(bb);
+			hash ^= zobrist.get_piece_hash(pt, c, sq);
+		}
+	}
+	
+	hash ^= zobrist.get_side_hash(side_to_move);
+	
+	for (int i = 0; i < 4; i++) {
+		if (castling_rights[i]) hash ^= zobrist.get_castle_hash(i); 
+	}
+	
+	if (ep_square != -1) hash ^= zobrist.get_ep_hash(ep_square);
+}
+
 void Position::make_move(Move move) {
 	Board::Piece moving = board.get_square(move.from());
 	int new_ep_square = -1;
@@ -59,61 +88,62 @@ void Position::make_move(Move move) {
 	undo_info.castling_rights = castling_rights;
 	undo_info.ep_square = ep_square;
 	undo_info.halfmove_clock = halfmove_clock;
+	undo_info.hash = hash;
 	
 	// Castling rights checker
 	if (moving.pt == Board::PieceType::King) {
 		if (moving.c == Board::Color::cWhite && move.from() == 4) {
-			castling_rights[(uint8_t)Position::CastlingRight::wKing] = false;
-			castling_rights[(uint8_t)Position::CastlingRight::wQueen] = false;
+			disable_castling_right(Position::CastlingRight::wKing);
+			disable_castling_right(Position::CastlingRight::wQueen);
 		} else if (moving.c == Board::Color::cBlack && move.from() == 60) {
-			castling_rights[(uint8_t)Position::CastlingRight::bKing] = false;
-			castling_rights[(uint8_t)Position::CastlingRight::bQueen] = false;
+			disable_castling_right(Position::CastlingRight::bKing);
+			disable_castling_right(Position::CastlingRight::bQueen);
 		}
 	} else if (moving.pt == Board::PieceType::Rook) {
 		if (moving.c == Board::Color::cWhite) {
-			if (move.from() == 0) castling_rights[(uint8_t)Position::CastlingRight::wQueen] = false;
-			else if (move.from() == 7)  castling_rights[(uint8_t)Position::CastlingRight::wKing] = false;
+			if (move.from() == 0) disable_castling_right(Position::CastlingRight::wQueen);
+			else if (move.from() == 7) disable_castling_right(Position::CastlingRight::wKing);
 		} else if (moving.c == Board::Color::cBlack) {
-			if (move.from() == 56) castling_rights[(uint8_t)Position::CastlingRight::bQueen] = false;
-			else if (move.from() == 63)  castling_rights[(uint8_t)Position::CastlingRight::bKing] = false;
+			if (move.from() == 56) disable_castling_right(Position::CastlingRight::bQueen);
+			else if (move.from() == 63) disable_castling_right(Position::CastlingRight::bKing);
 		}
 	}
 	
 	if (is_capture && cap_target.pt == Board::PieceType::Rook) {
 		if (cap_target.c == Board::Color::cWhite) {
-			if (move.to() == 0) castling_rights[(uint8_t)Position::CastlingRight::wQueen] = false;
-			else if (move.to() == 7)  castling_rights[(uint8_t)Position::CastlingRight::wKing] = false;
+			if (move.to() == 0) disable_castling_right(Position::CastlingRight::wQueen);
+			else if (move.to() == 7) disable_castling_right(Position::CastlingRight::wKing);
 		} else if (cap_target.c == Board::Color::cBlack) {
-			if (move.to() == 56) castling_rights[(uint8_t)Position::CastlingRight::bQueen] = false;
-			else if (move.to() == 63)  castling_rights[(uint8_t)Position::CastlingRight::bKing] = false;
+			if (move.to() == 56) disable_castling_right(Position::CastlingRight::bQueen);
+			else if (move.to() == 63) disable_castling_right(Position::CastlingRight::bKing);
 		}
 	}
 	
 	// Board updating
 	if ((uint8_t)move.move_type() & (uint8_t)Move::MoveType::KnightPromotion) { // Promotion behavior
-		board.remove_piece(moving.pt, side_to_move, move.from());
+		remove_piece(moving.pt, side_to_move, move.from());
 		if (is_capture) {
-			board.remove_piece(cap_target.pt, cap_target.c, move.to());
+			remove_piece(cap_target.pt, cap_target.c, move.to());
 		} 
-		board.add_piece(static_cast<Board::PieceType>(Board::PieceType::Knight + ((uint8_t)move.move_type() & 0x3)), side_to_move, move.to());
+		add_piece(static_cast<Board::PieceType>(Board::PieceType::Knight + ((uint8_t)move.move_type() & 0x3)), side_to_move, move.to());
 	} else if (move.move_type() == Move::MoveType::EpCapture) { // En passant behavior
 		int cap_square = move.to() + (side_to_move == Board::Color::cWhite ? -8 : 8);
 		cap_target = board.get_square(cap_square);
-		board.remove_piece(cap_target.pt, cap_target.c, cap_square);
-		board.update(moving.pt, side_to_move, move.from(), move.to());
+		remove_piece(cap_target.pt, cap_target.c, cap_square);
+		update(moving.pt, side_to_move, move.from(), move.to());
 	} else { // Every other kind of move
 		switch (move.move_type()) {
 			case Move::MoveType::DoublePawnPush:
 				new_ep_square = move.to() + (side_to_move == Board::Color::cWhite ? -8 : 8);
 				break;
 			case Move::MoveType::KingCastle:
-				board.update(Board::PieceType::Rook, side_to_move, move.from() + 3, move.to() - 1);
+				update(Board::PieceType::Rook, side_to_move, move.from() + 3, move.to() - 1);
 				break;
 			case Move::MoveType::QueenCastle:
-				board.update(Board::PieceType::Rook, side_to_move, move.from() - 4, move.to() + 1);
+				update(Board::PieceType::Rook, side_to_move, move.from() - 4, move.to() + 1);
 				break;
 		}
-		board.update(moving.pt, side_to_move, move.from(), move.to(), is_capture);
+		update(moving.pt, side_to_move, move.from(), move.to(), is_capture);
 	}
 	
 	// Finalizing and pushing the information to be stored in the move history
@@ -180,4 +210,30 @@ void Position::unmake_move(Move move) {
 	castling_rights = undo_info.castling_rights;
 	ep_square = undo_info.ep_square;
 	halfmove_clock = undo_info.halfmove_clock;
+	hash = undo_info.hash;
+}
+
+void Position::disable_castling_right(CastlingRight cr) {
+	castling_rights[(uint8_t)cr] = false;
+	hash ^= zobrist.get_castle_hash((uint8_t)cr);
+}
+
+void Position::add_piece(Board::PieceType pt, Board::Color c, int sq) {
+	board.add_piece(pt, c, sq);
+	hash ^= zobrist.get_piece_hash(pt, c, sq);
+}
+		
+void Position::remove_piece(Board::PieceType pt, Board::Color c, int sq) {
+	board.remove_piece(pt, c, sq);
+	hash ^= zobrist.get_piece_hash(pt, c, sq);
+}
+
+void Position::update(Board::PieceType pt, Board::Color c, int from, int to, bool capture) {
+	board.update(pt, c, from, to, capture);
+	hash ^= zobrist.get_piece_hash(pt, c, from);
+	if (capture) {
+		Board::Piece cap_target = board.get_square(to);
+		hash ^= zobrist.get_piece_hash(cap_target.pt, cap_target.c, to);
+	}
+	hash ^= zobrist.get_piece_hash(pt, c, to);
 }

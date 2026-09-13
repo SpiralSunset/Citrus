@@ -197,11 +197,6 @@ int Evaluation::evaluate(Position &pos) {
 	
 	int phase = 0;
 	
-	//for (int i = Board::PieceType::Pawn; i <= Board::PieceType::King; i++) {
-		//Board::PieceType pt = static_cast<Board::PieceType>(i);
-		//phase -= phase_weight(pt) * popcount(pos.get_board().get_piece_set(pt));
-	//}
-	
 	uint64_t occ = pos.get_board().get_piece_set(Board::Color::cWhite) | pos.get_board().get_piece_set(Board::Color::cBlack);
 	while (occ) {
 		int sq = pop_lsb(occ);
@@ -223,12 +218,6 @@ int Evaluation::evaluate(Position &pos) {
 	int score = (mg_score * phase + eg_score * (TOTAL_PHASE - phase)) / TOTAL_PHASE;
 	
 	if (pos.get_side_to_move() == Board::Color::cBlack) score = -score;
-	
-	//std::cout << "mg_score = " << mg_score << std::endl;
-	//std::cout << "eg_score = " << eg_score << std::endl;
-	//std::cout << "phase = " << phase << std::endl;
-	//std::cout << "score = " << score << std::endl;
-	
 
 	return score;
 }

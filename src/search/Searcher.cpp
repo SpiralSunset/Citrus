@@ -5,7 +5,7 @@
 #include <cstdlib>
 
 bool Searcher::is_mate_score(int score) {
-	return std::abs(score - MATE) < MAX_SEARCH_PLY; 
+	return std::abs(std::abs(score) - MATE) < MAX_SEARCH_PLY; 
 }
 
 bool Searcher::time_limit_reached() {
@@ -14,12 +14,13 @@ bool Searcher::time_limit_reached() {
 	return false;
 }
 
-int Searcher::move_order_score(Move move) {
+int Searcher::move_order_score(Move move, Move tt_best) {
+	if (tt_best.is_valid() && move.equals(tt_best)) return 2;
 	if ((uint8_t)move.move_type() & (uint8_t)Move::MoveType::Capture) return 1;
 	return 0;
 }
 
-Move Searcher::pick_move(MoveList &move_list, int move_idx, int ply) {
+Move Searcher::pick_move(MoveList &move_list, int move_idx, int ply, Move tt_best) {
 	// PV moves should always be the highest priority
 	if (move_idx == 0) {
 		for (int i = 0; i < move_list.get_size(); i++) {
@@ -31,9 +32,9 @@ Move Searcher::pick_move(MoveList &move_list, int move_idx, int ply) {
 	}
 	
 	int best = move_idx;
-	int best_score = move_order_score(move_list[move_idx]);
+	int best_score = move_order_score(move_list[move_idx], tt_best);
 	for (int i = move_idx + 1; i < move_list.get_size(); i++) {
-		int score = move_order_score(move_list[i]);
+		int score = move_order_score(move_list[i], tt_best);
 		if (score > best_score) {
 			best = i;
 			best_score = score;
@@ -51,6 +52,8 @@ Move Searcher::find_best_move(Position pos) {
 	start_time = std::chrono::steady_clock::now();
 	
 	SearchResult sr;
+	// Iterative deepening, a search is done with iterating depths
+	// This is actually faster than a single search, since ttable and principle variation are retained
 	for (int d = 1; d <= settings.depth; d++) {
 		SearchResult new_sr = negamax(pos, d, 0, -INF, INF);
 		
@@ -77,18 +80,49 @@ Searcher::SearchResult Searcher::negamax(Position &pos, int depth, int ply, int 
 	
 	if (settings.finite_time && (node_count % 2048 == 0) && time_limit_reached()) stopping = true;
 	
+	// Base case
 	if (depth == 0 || stopping) {
 		out.score = Evaluation::evaluate(pos);
 		out.node = node_count;
 		return out;
 	}
 	
+	// Determines if the ttable should be used
+	uint64_t key = pos.get_zobrist_key();
+	TTable::Entry entry = ttable[key];
+	Move tt_best;
+	bool key_match = entry.key == key;
+	if (key_match) {
+		if (entry.depth >= depth) { 
+			if ((entry.bound == TTable::Bound::Exact) ||
+			    (entry.bound == TTable::Bound::Lower && entry.score >= beta) ||
+			    (entry.bound == TTable::Bound::Upper && entry.score <= alpha)) {
+				// Perform cutoff
+				if (is_mate_score(entry.score)) { // Mate scores always must be relative to ply
+					if (entry.score > 0) {
+						out.score = entry.score - ply;
+					} else {
+						out.score = entry.score + ply;
+					}
+				} else {
+					out.score = entry.score;
+				}
+				out.chosen_move = entry.best_move;
+				out.node = node_count;
+				return out;
+			}
+		}
+		tt_best = entry.best_move;
+	}
+	int org_alpha = alpha; // Used later when adding entries to the ttable
+	
+	// The search
 	int max = -INF;
 	move_generator.gen_pseudo_legal_moves(pos, list_stack[ply]);
 	bool could_move = false;
 	int move_idx = 0;
 	while (move_idx < list_stack[ply].get_size()) {
-		Move move = pick_move(list_stack[ply], move_idx, ply);
+		Move move = pick_move(list_stack[ply], move_idx, ply, tt_best);
 		move_idx++;
 		pos.make_move(move);
 
@@ -112,21 +146,44 @@ Searcher::SearchResult Searcher::negamax(Position &pos, int depth, int ply, int 
 					pv_length[ply] = pv_length[ply + 1]; // Updates length of pv in next ply
 				}
 			}
-			if (alpha >= beta || stopping) {
+			if (alpha >= beta) {
 				pos.unmake_move(move);
-				return out;
+				break;
 			}
 		}
 		
 		pos.unmake_move(move);
 	}
 	
+	// Determines checkmate or stalemate when unable to make a legal move
+	// IMPORTANT: out.best_move is never initialized in this case
 	if (!could_move) {
 		if (move_generator.is_side_in_check(pos, Move::MoveType::Quiet, pos.get_side_to_move())) {
 			out.score = -MATE + ply; // Checkmate
 		} else {
 			out.score = 0; // Stalemate
 		}
+	}
+	
+	// Writes new entry to the ttable unless the existing entry has a greater depth
+	if (!stopping && (!entry.is_valid || depth >= entry.depth)) {
+		TTable::Entry new_entry;
+		new_entry.key = key;
+		new_entry.best_move = out.chosen_move;
+		new_entry.depth = depth;
+		// Normalizes mate score
+		if (is_mate_score(out.score)) {
+			if (out.score > 0) {
+				new_entry.score += ply;
+			} else {
+				new_entry.score -= ply;
+			}
+		}
+		if (out.score >= beta) new_entry.bound = TTable::Bound::Lower;
+		else if (out.score <= org_alpha) new_entry.bound = TTable::Bound::Upper;
+		else new_entry.bound = TTable::Bound::Exact;
+		new_entry.is_valid = true;
+		ttable[key] = new_entry;
 	}
 	
 	return out;

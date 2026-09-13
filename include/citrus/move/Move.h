@@ -92,6 +92,13 @@ class Move {
 		 */
 		bool equals(Move other);
 		
+		/**
+		 * \brief Checks whether the move has been set to a proper value.
+		 * 
+		 * \return whether the move is valid.
+		 */
+		bool is_valid();
+		
 	private:
 		/// \brief The 16 bit word that stores the move.
 		uint16_t raw_move;
