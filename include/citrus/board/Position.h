@@ -59,7 +59,7 @@ class Position {
 		Position(Board new_board, Board::Color new_side_to_move = Board::Color::cWhite, std::array<bool, 4> new_castling_rights = {true, true, true, true}, int new_ep_square = -1, int new_halfmove_clock = 0, int new_fullmove_counter = 0);
 		
 		/// \return the board containing the piece placement.
-		Board get_board() const;
+		const Board& get_board() const;
 		
 		/// \return the side whose turn it is to move.
 		Board::Color get_side_to_move() const;

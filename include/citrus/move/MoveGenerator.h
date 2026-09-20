@@ -39,8 +39,6 @@ class MoveGenerator {
 		 * \param last_move_type the last type of move made.
 		 * \param side the side that is being examined.
 		 * \return whether the side's king is in check.
-		 * 
-		 * \todo Suspected to be the current bottleneck for engine performance.
 		 */
 		bool is_side_in_check(Position &pos, Move::MoveType last_move_type, Board::Color side);
 		

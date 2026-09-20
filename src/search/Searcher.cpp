@@ -67,7 +67,6 @@ Move Searcher::find_best_move(Position pos) {
 		}
 		previous_pv_length = pv_length[0];
 	}
-
 	return sr.chosen_move;
 }
 
@@ -82,9 +81,17 @@ Searcher::SearchResult Searcher::negamax(Position &pos, int depth, int ply, int 
 	
 	// Base case
 	if (depth == 0 || stopping) {
-		out.score = Evaluation::evaluate(pos);
-		out.node = node_count;
-		return out;
+		// This is a temporary fix for checkmate not being evaluated at depth 0.
+		// If the side to move is currently in check, it will extend the search.
+		// This is not a perfect solution, but it will work until quiescence search can be implemented.
+		// Additionally, stalemate is not accounted for yet. This will need to be fixed as well.
+		if (move_generator.is_side_in_check(pos, Move::MoveType::Quiet, pos.get_side_to_move())) {
+			depth = 1;
+		} else {
+			out.score = Evaluation::evaluate(pos);
+			out.node = node_count;
+			return out;
+		}
 	}
 	
 	// Determines if the ttable should be used
@@ -171,6 +178,7 @@ Searcher::SearchResult Searcher::negamax(Position &pos, int depth, int ply, int 
 		new_entry.key = key;
 		new_entry.best_move = out.chosen_move;
 		new_entry.depth = depth;
+		new_entry.score = out.score;
 		// Normalizes mate score
 		if (is_mate_score(out.score)) {
 			if (out.score > 0) {

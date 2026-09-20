@@ -180,6 +180,8 @@ class Searcher {
 		 * \param alpha minimum assured score of maximizing side
 		 * \param beta maximum assured score of minimizing side
 		 * \return the best move (and related info) from the position.
+		 *
+		 * \todo Base case must account for checkmate and stalemate.
 		 */
 		SearchResult negamax(Position &pos, int depth, int ply, int alpha, int beta);
 };

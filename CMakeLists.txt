@@ -1,8 +1,10 @@
-cmake_minimum_required(VERSION 3.23)
+cmake_minimum_required(VERSION 3.21.4)
 project(Citrus LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+find_package(Threads REQUIRED)
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
@@ -15,6 +17,11 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
 add_executable(Citrus
 	src/Main.cpp
 	${SOURCES}
+)
+
+target_link_libraries(Citrus
+	PRIVATE
+		Threads::Threads
 )
 
 target_include_directories(Citrus

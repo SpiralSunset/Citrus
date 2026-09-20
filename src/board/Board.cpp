@@ -37,7 +37,7 @@ uint64_t Board::get_piece_set(PieceType pt, Color c) const {
 	return pieces[pt] & pieces[c];
 }
 
-Board::Piece Board::get_square(int sq) {
+Board::Piece Board::get_square(int sq) const {
 	if (sq < 0 || sq > 63) {
 		Board::Piece p;
 		return p;
@@ -77,7 +77,7 @@ void Board::update(PieceType pt, Color c, int from, int to, bool capture) {
 	squares[to].c = c;
 }
 
-std::array<Board::Piece, 64> Board::to_array() {
+std::array<Board::Piece, 64> Board::to_array() const {
 	std::array<Board::Piece, 64> out;
 	
 	for (int i = Board::Color::cWhite; i <= Board::Color::cBlack; ++i) {

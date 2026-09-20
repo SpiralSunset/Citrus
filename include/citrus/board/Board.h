@@ -100,7 +100,7 @@ class Board {
 		 * \param sq the square index.
 		 * \return the piece.
 		 */
-		Piece get_square(int sq);
+		Piece get_square(int sq) const;
 		
 		/**
 		 * \brief Adds a piece to the board.
@@ -147,7 +147,7 @@ class Board {
 		 * \return serialized board.
 		 * \todo Rewrite with a more efficient implementation.
 		 */
-		std::array<Piece, 64> to_array();
+		std::array<Piece, 64> to_array() const;
 		
 	private:
 		/// \brief The bitboards of each piece type.

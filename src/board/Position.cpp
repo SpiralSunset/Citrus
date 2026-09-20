@@ -22,7 +22,7 @@ Position::Position(Board new_board, Board::Color new_side_to_move, std::array<bo
 }
 
 
-Board Position::get_board() const {
+const Board& Position::get_board() const {
 	return board;
 }
 
@@ -151,12 +151,14 @@ void Position::make_move(Move move) {
 	history.push(undo_info);
 	
 	// Switching side and incrementing the fullmove counter after black turns
+	hash ^= zobrist.get_side_hash(side_to_move);
 	if (side_to_move == Board::Color::cWhite) {
 		side_to_move = Board::Color::cBlack;
 	} else if (side_to_move == Board::Color::cBlack) {
 		side_to_move = Board::Color::cWhite;
 		fullmove_counter++;
 	}
+	hash ^= zobrist.get_side_hash(side_to_move);
 	
 	// Incrementing or resetting the halfmove clock
 	if (moving.pt == Board::PieceType::Pawn || is_capture) {
@@ -166,7 +168,13 @@ void Position::make_move(Move move) {
 	}
 	
 	// Clearing or updating the ep target square
+	if (ep_square != -1) {
+    	hash ^= zobrist.get_ep_hash(ep_square);
+	}
 	ep_square = new_ep_square;
+	if (ep_square != -1) {
+		hash ^= zobrist.get_ep_hash(ep_square);
+	}
 }
 
 void Position::unmake_move(Move move) {
@@ -214,6 +222,10 @@ void Position::unmake_move(Move move) {
 }
 
 void Position::disable_castling_right(CastlingRight cr) {
+	uint8_t idx = static_cast<uint8_t>(cr);
+    if (!castling_rights[idx]) {
+        return;
+    }
 	castling_rights[(uint8_t)cr] = false;
 	hash ^= zobrist.get_castle_hash((uint8_t)cr);
 }
@@ -229,10 +241,13 @@ void Position::remove_piece(Board::PieceType pt, Board::Color c, int sq) {
 }
 
 void Position::update(Board::PieceType pt, Board::Color c, int from, int to, bool capture) {
+	Board::Piece cap_target;
+	if (capture) {
+		cap_target = board.get_square(to);
+	}
 	board.update(pt, c, from, to, capture);
 	hash ^= zobrist.get_piece_hash(pt, c, from);
 	if (capture) {
-		Board::Piece cap_target = board.get_square(to);
 		hash ^= zobrist.get_piece_hash(cap_target.pt, cap_target.c, to);
 	}
 	hash ^= zobrist.get_piece_hash(pt, c, to);

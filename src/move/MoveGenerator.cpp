@@ -203,45 +203,35 @@ bool MoveGenerator::is_side_in_check(Position &pos, Move::MoveType last_move_typ
 		}
 	} else if (last_move_type == Move::MoveType::QueenCastle) {
 		if (side == Board::Color::cWhite) {
-			king_bb = 0x000000000000001E;
+			king_bb = 0x000000000000001C;
 		} else {
-			king_bb = 0x1E00000000000000;
+			king_bb = 0x1C00000000000000;
 		}
 	} else {
 		king_bb = pos.get_board().get_piece_set(Board::PieceType::King, side);
 	}
-	
-	uint64_t pawns = pos.get_board().get_piece_set(Board::PieceType::Pawn, opp_side);
-	while (pawns) {
-		int sq = pop_lsb(pawns);
-		if (king_bb & pawn_attacks[opp_side][sq]) return true;
-	}
-	
-	uint64_t knights = pos.get_board().get_piece_set(Board::PieceType::Knight, opp_side);
-	while (knights) {
-		int sq = pop_lsb(knights);
-		if (king_bb & knight_moves[sq]) return true;
+
+	int king_sq;
+	while(king_bb) {
+		king_sq = pop_lsb(king_bb);
+
+		uint64_t pawns = pos.get_board().get_piece_set(Board::PieceType::Pawn, opp_side);
+		if (pawn_attacks[side][king_sq] & pawns) return true;
+
+		uint64_t knights = pos.get_board().get_piece_set(Board::PieceType::Knight, opp_side);
+		if (knight_moves[king_sq] & knights) return true;
+
+		uint64_t king = pos.get_board().get_piece_set(Board::PieceType::King, opp_side);
+		if (king_moves[king_sq] & king) return true;
+
+		uint64_t queens = pos.get_board().get_piece_set(Board::PieceType::Queen, opp_side);
+
+		uint64_t diagonal_sliding = pos.get_board().get_piece_set(Board::PieceType::Bishop, opp_side) | queens;
+		if (get_bishop_attacks(king_sq, occ) & diagonal_sliding) return true;
+
+		uint64_t orthagonal_sliding = pos.get_board().get_piece_set(Board::PieceType::Rook, opp_side) | queens;
+		if (get_rook_attacks(king_sq, occ) & orthagonal_sliding) return true;
 	}
 
-	uint64_t king = pos.get_board().get_piece_set(Board::PieceType::King, opp_side);
-	while (king) {
-		int sq = pop_lsb(king);
-		if (king_bb & king_moves[sq]) return true;
-	}
-	
-	uint64_t queens = pos.get_board().get_piece_set(Board::PieceType::Queen, opp_side);
-	
-	uint64_t diagonal_sliding = pos.get_board().get_piece_set(Board::PieceType::Bishop, opp_side) | queens;
-	while (diagonal_sliding) {
-		int sq = pop_lsb(diagonal_sliding);
-		if (king_bb & get_bishop_attacks(sq, occ)) return true;
-	}
-	
-	uint64_t orthagonal_sliding = pos.get_board().get_piece_set(Board::PieceType::Rook, opp_side) | queens;
-	while (orthagonal_sliding) {
-		int sq = pop_lsb(orthagonal_sliding);
-		if (king_bb & get_rook_attacks(sq, occ)) return true;
-	}
-	
 	return false;
 }
