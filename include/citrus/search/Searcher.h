@@ -81,7 +81,8 @@ class Searcher {
 		bool is_mate_score(int score);
 		
 		/**
-		 * \brief Determines whether the movetime has been reached.
+		 * \brief Determines whether the movetime has been reached.		 *
+		 * \todo Base case must account for checkmate and stalemate.
 		 * 
 		 * Getting the current time is not computationally free, so this should not be run every node.
 		 * 
@@ -103,7 +104,7 @@ class Searcher {
 		 * \param move the move to be scored.
 		 * \return the score.
 		 */
-		int move_order_score(Move move, Move tt_best);
+		int move_order_score(Position &pos, Move move, Move tt_best);
 		
 		/**
 		 * \brief Picks a move from a MoveList with the highest chance of being good.
@@ -119,7 +120,7 @@ class Searcher {
 		 * \param ply current ply of the search, to compare to the pv table.
 		 * \return the highest priority move from the list.
 		 */
-		Move pick_move(MoveList &move_list, int move_idx, int ply, Move tt_best);
+		Move pick_move(Position &pos, MoveList &move_list, int move_idx, int ply, Move tt_best);
 		
 		/**
 		 * \brief Finds the ideal move that can be made from a given position.
@@ -169,6 +170,40 @@ class Searcher {
 		
 		/// \brief The transposition table.
 		TTable ttable;
+
+		/**
+		 * \brief Table of values used for the MVV-LVA heuristic in the move ordering.
+		 *
+		 * MVV-LVA is used to quickly compare the value of captures. 
+		 * For example, a pawn capturing a rook is likely to be more worthwhile than a pawn capturing another pawn.
+		 *
+		 * The rows represent the captured piece, and the columns represent the capturing piece.
+		 * They are arranged in the order described for Board::PieceType.
+		 */
+		int mvv_lva[6][6] {
+			{10, 13, 13, 15, 18, 0},
+			{30, 33, 33, 35, 38, 0},
+			{30, 33, 33, 35, 38, 0},
+			{50, 53, 53, 55, 58, 0},
+			{80, 53, 53, 55, 58, 0},
+			{ 0,  0,  0,  0,  0, 0}
+		};
+
+		/**
+		 * \brief The quiescence search performed at the end of the negamax leaf nodes.
+		 *
+		 * When choosing a move in the negamax search, stopping immediately at depth 0 could be problematic.
+		 * There is a chance that a unevaluated, detrimental move could happen immediately after.
+		 * We want the search to end in a position where there are no important tactical decisions to be made.
+		 * The purpose of quiescence search is to do exactly that.
+		 * 
+		 * \param pos the position that moves will be derived from
+		 * \param alpha minimum assured score of maximizing side
+		 * \param beta maximum assured score of minimizing side
+		 * \param ply the current ply of the search
+		 * \return the best move (and related info) from the position.
+		 */
+		SearchResult quiesce(Position &pos, int alpha, int beta, int ply);
 			
 		/**
 		 * \brief Recursive search to find the highest-value move from a position.
@@ -179,9 +214,8 @@ class Searcher {
 		 * \param depth the current depth of the search
 		 * \param alpha minimum assured score of maximizing side
 		 * \param beta maximum assured score of minimizing side
+		 * \param ply the current ply of the search
 		 * \return the best move (and related info) from the position.
-		 *
-		 * \todo Base case must account for checkmate and stalemate.
 		 */
 		SearchResult negamax(Position &pos, int depth, int ply, int alpha, int beta);
 };

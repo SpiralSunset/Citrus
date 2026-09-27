@@ -77,6 +77,19 @@ void Position::create_hash() {
 	if (ep_square != -1) hash ^= zobrist.get_ep_hash(ep_square);
 }
 
+bool Position::has_threefold_repetition() {
+	int repetitions = 0;
+	for (int i = 4; i <= halfmove_clock; i+=2) {
+		if (history.at(history.size() - i).hash == hash) {
+			repetitions++;
+		}
+		if (repetitions == 2) {
+			return true;
+		}
+	}
+	return false;
+}
+
 void Position::make_move(Move move) {
 	Board::Piece moving = board.get_square(move.from());
 	int new_ep_square = -1;
@@ -148,7 +161,7 @@ void Position::make_move(Move move) {
 	
 	// Finalizing and pushing the information to be stored in the move history
 	undo_info.cap_target = cap_target;
-	history.push(undo_info);
+	history.push_back(undo_info);
 	
 	// Switching side and incrementing the fullmove counter after black turns
 	hash ^= zobrist.get_side_hash(side_to_move);
@@ -178,8 +191,8 @@ void Position::make_move(Move move) {
 }
 
 void Position::unmake_move(Move move) {
-	UndoInfo undo_info = history.top();
-	history.pop();
+	UndoInfo undo_info = history.back();
+	history.pop_back();
 	
 	Board::Piece moving = board.get_square(move.to());
 	

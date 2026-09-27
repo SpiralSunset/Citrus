@@ -14,13 +14,17 @@ bool Searcher::time_limit_reached() {
 	return false;
 }
 
-int Searcher::move_order_score(Move move, Move tt_best) {
-	if (tt_best.is_valid() && move.equals(tt_best)) return 2;
-	if ((uint8_t)move.move_type() & (uint8_t)Move::MoveType::Capture) return 1;
+int Searcher::move_order_score(Position &pos, Move move, Move tt_best) {
+	if (tt_best.is_valid() && move.equals(tt_best)) return 200;
+	if ((uint8_t)move.move_type() & (uint8_t)Move::MoveType::Capture) {
+		Board::PieceType target = pos.get_board().get_square(move.to()).pt;
+		Board::PieceType capturer = pos.get_board().get_square(move.from()).pt;
+		return 100 + mvv_lva[target-2][capturer-2];
+	}
 	return 0;
 }
 
-Move Searcher::pick_move(MoveList &move_list, int move_idx, int ply, Move tt_best) {
+Move Searcher::pick_move(Position &pos, MoveList &move_list, int move_idx, int ply, Move tt_best) {
 	// PV moves should always be the highest priority
 	if (move_idx == 0) {
 		for (int i = 0; i < move_list.get_size(); i++) {
@@ -32,9 +36,9 @@ Move Searcher::pick_move(MoveList &move_list, int move_idx, int ply, Move tt_bes
 	}
 	
 	int best = move_idx;
-	int best_score = move_order_score(move_list[move_idx], tt_best);
+	int best_score = move_order_score(pos, move_list[move_idx], tt_best);
 	for (int i = move_idx + 1; i < move_list.get_size(); i++) {
-		int score = move_order_score(move_list[i], tt_best);
+		int score = move_order_score(pos, move_list[i], tt_best);
 		if (score > best_score) {
 			best = i;
 			best_score = score;
@@ -70,6 +74,77 @@ Move Searcher::find_best_move(Position pos) {
 	return sr.chosen_move;
 }
 
+Searcher::SearchResult Searcher::quiesce(Position &pos, int alpha, int beta, int ply) {
+	SearchResult out;
+	node_count++;
+	out.node = node_count;
+
+	if (pos.has_threefold_repetition()) {
+		out.score = 0;
+		return out;
+	}
+
+	// Since there is no depth limit here, the search could theoretically reach the max number of plies.
+	// It is incredibly unlikely that this will ever happen, but I have accounted for it anyway.
+	if (ply >= MAX_SEARCH_PLY - 1) {
+		out.score = Evaluation::evaluate(pos);
+		return out;
+	}
+
+	bool in_check = move_generator.is_side_in_check(pos, Move::MoveType::Quiet, pos.get_side_to_move());
+
+	if (!in_check) {
+		out.score = Evaluation::evaluate(pos);
+		if (out.score >= beta) {
+			return out;
+		} else if (out.score > alpha) {
+			alpha = out.score;
+		}
+	} else {
+		out.score = -INF;
+	}
+
+	bool could_move = false;
+	move_generator.gen_pseudo_legal_moves(pos, list_stack[ply]);
+	for (int ml_idx = 0; ml_idx < list_stack[ply].get_size(); ml_idx++) {
+		//Move move = list_stack[ply][ml_idx];
+		Move move = pick_move(pos, list_stack[ply], ml_idx, ply, Move());
+		//if (!in_check && !(((uint8_t)move.move_type() & (uint8_t)Move::MoveType::Capture) || ((uint8_t)move.move_type() & (uint8_t)Move::MoveType::KnightPromotion))) continue; // Skip non-capture moves
+		if (!in_check && (uint8_t)move.move_type() <= (uint8_t)Move::MoveType::QueenCastle) continue; // Skip non-tactical moves
+
+		pos.make_move(move);
+
+		if (!move_generator.is_side_in_check(pos, move.move_type(), pos.get_next_to_move())) {
+			could_move = true;
+			SearchResult result = quiesce(pos, -beta, -alpha, ply+1);
+			result.score = -result.score;
+			pos.unmake_move(move);
+
+			if (result.score >= beta) {
+				out = result;
+				out.chosen_move = move;
+				return out;
+			}
+			if (result.score > out.score) {
+				out.score = result.score;
+				out.chosen_move = move;
+			}
+			if (result.score > alpha) {
+				alpha = result.score;
+			}
+		} else {
+			pos.unmake_move(move);
+		}
+	}
+
+	// Can't use could_move for finding stalemate here because it represents TACTICAL moves
+	if (!could_move && in_check) {
+		out.score = -MATE + ply; // Checkmate
+	}
+
+	return out;
+}
+
 Searcher::SearchResult Searcher::negamax(Position &pos, int depth, int ply, int alpha, int beta) {
 	SearchResult out;
 	node_count++;
@@ -78,20 +153,16 @@ Searcher::SearchResult Searcher::negamax(Position &pos, int depth, int ply, int 
 	if (settings.finite_nodes && node_count >= settings.max_nodes) stopping = true;
 	
 	if (settings.finite_time && (node_count % 2048 == 0) && time_limit_reached()) stopping = true;
+
+	if (pos.has_threefold_repetition()) {
+		out.score = 0;
+		return out;
+	}
 	
 	// Base case
 	if (depth == 0 || stopping) {
-		// This is a temporary fix for checkmate not being evaluated at depth 0.
-		// If the side to move is currently in check, it will extend the search.
-		// This is not a perfect solution, but it will work until quiescence search can be implemented.
-		// Additionally, stalemate is not accounted for yet. This will need to be fixed as well.
-		if (move_generator.is_side_in_check(pos, Move::MoveType::Quiet, pos.get_side_to_move())) {
-			depth = 1;
-		} else {
-			out.score = Evaluation::evaluate(pos);
-			out.node = node_count;
-			return out;
-		}
+		SearchResult quiet = quiesce(pos, alpha, beta, ply);
+		return quiet;
 	}
 	
 	// Determines if the ttable should be used
@@ -129,7 +200,7 @@ Searcher::SearchResult Searcher::negamax(Position &pos, int depth, int ply, int 
 	bool could_move = false;
 	int move_idx = 0;
 	while (move_idx < list_stack[ply].get_size()) {
-		Move move = pick_move(list_stack[ply], move_idx, ply, tt_best);
+		Move move = pick_move(pos, list_stack[ply], move_idx, ply, tt_best);
 		move_idx++;
 		pos.make_move(move);
 

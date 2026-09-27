@@ -31,7 +31,7 @@ class Position {
 		/**
 		 * \brief Information needed to unmake a move.
 		 * 
-		 * It is added and removed from the history stack with make_move() and unmake_move() respectively.
+		 * It is added and removed from the history with make_move() and unmake_move() respectively.
 		 */
 		struct UndoInfo {
 			Board::Piece cap_target;
@@ -93,6 +93,14 @@ class Position {
 		 * For more information, see Zobrist.
 		 */
 		void create_hash();
+
+		/**
+		 * \brief Checks if the current position has a threefold repetition.
+		 *
+		 * A threefold repetition happens when the exact same board position occurs three times in a game.
+		 * Under most chess rulesets, this allows either player to claim a stalemate.
+		 */
+		bool has_threefold_repetition();
 		
 		/**
 		 * \brief Updates the position with a given move.
@@ -109,7 +117,7 @@ class Position {
 		 * \brief Reverts the position to how it was before the last move.
 		 * 
 		 * This is the inverse of make_move().
-		 * Elements of a position that cannot be reversed are restored from a history stack.
+		 * Elements of a position that cannot be reversed are restored from the history.
 		 * In a search tree, this function reverts a child node to its parent node.
 		 * 
 		 * \param move the move being unmade.
@@ -142,7 +150,7 @@ class Position {
 		Zobrist zobrist;
 		
 		/// \brief Movement history to be restored with unmake_move().
-		std::stack<UndoInfo> history;
+		std::vector<UndoInfo> history;
 		
 		/**
 		 * \brief Disables a castling right on both board representations.
