@@ -41,7 +41,7 @@ class Searcher {
 		 * Several of these currently do nothing.
 		 */
 		struct SearchSettings {
-			int depth = 5;
+			int depth = 7;
 			int wtime = 0;
 			int btime = 0;
 			int winc = 0;
@@ -97,6 +97,7 @@ class Searcher {
 		 * - Ply move from previous iteration (not handled here)
 		 * - Best move from the transposition table
 		 * - Is a capture
+		 * - Quiet move that previously caused a beta cutoff
 		 * - Everything else
 		 * 
 		 * More complexity will be added over time.
@@ -104,7 +105,7 @@ class Searcher {
 		 * \param move the move to be scored.
 		 * \return the score.
 		 */
-		int move_order_score(Position &pos, Move move, Move tt_best);
+		int move_order_score(Position &pos, Move move, int ply, Move tt_best);
 		
 		/**
 		 * \brief Picks a move from a MoveList with the highest chance of being good.
@@ -146,6 +147,9 @@ class Searcher {
 		
 		/// \brief Value of a position in checkmate.
 		constexpr static int MATE = 5000000;
+
+		/// \brief Max value that the history heuristic can have.
+		constexpr static int MAX_HISTORY = 16384;
 		
 		/// \brief Pre-allocated MoveLists indexed by depth.
 		std::array<MoveList, MAX_SEARCH_PLY> list_stack;
@@ -188,6 +192,32 @@ class Searcher {
 			{80, 53, 53, 55, 58, 0},
 			{ 0,  0,  0,  0,  0, 0}
 		};
+
+		/// \brief The table of killer moves.
+		Move killer_table[MAX_SEARCH_PLY][2];
+
+		/// \brief The history table.
+		int history_table[2][64][64] = {};
+
+		/// \brief The current list of quiet moves.
+		MoveList quiet_list;
+
+		/**
+		 * \brief Adds a killer move to the killer table.
+		 * 
+		 * \param move The move to be added.
+		 * \param ply The ply at which that move occurred.
+		 */
+		void add_killer(Move move, int ply);
+
+		/**
+		 * \brief Updates the history table with a move.
+		 *
+		 * \param side_to_move The current side to move.
+		 * \param move The move to update.
+		 * \param bonus The calculated bonus to be considered.
+		 */
+		void update_history(Board::Color side_to_move, Move move, int bonus);
 
 		/**
 		 * \brief The quiescence search performed at the end of the negamax leaf nodes.

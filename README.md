@@ -5,11 +5,11 @@ It is being worked on as the subject of my Honors Capstone Project.
 
 ## Status
 
-Citrus is in stage 2 of development. It is being worked on entirely in my free time.
+Citrus is on hiatus while I finish my capstone report.
 
-Here are some planned additions for the near future, in no particular order:
+Here are some planned additions for the future, in no particular order:
 - [x] Iterative deepening and transposition table
-- [ ] Quiescence search
+- [x] Quiescence search
 - [ ] Mate search
 - [ ] Magic bitboards
 - [ ] Time managing

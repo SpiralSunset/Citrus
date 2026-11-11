@@ -3,6 +3,7 @@
 #include "citrus/board/Bitboard.h"
 #include <algorithm>
 #include <cstdlib>
+#include <iostream>
 
 bool Searcher::is_mate_score(int score) {
 	return std::abs(std::abs(score) - MATE) < MAX_SEARCH_PLY; 
@@ -10,16 +11,32 @@ bool Searcher::is_mate_score(int score) {
 
 bool Searcher::time_limit_reached() {
 	auto elapsed = std::chrono::steady_clock::now() - start_time;
-	if (elapsed >= std::chrono::milliseconds(settings.movetime)) return true;
-	return false;
+	auto limit = std::chrono::milliseconds(std::max(1, settings.movetime - 200));
+	return elapsed >= limit;
 }
 
-int Searcher::move_order_score(Position &pos, Move move, Move tt_best) {
-	if (tt_best.is_valid() && move.equals(tt_best)) return 200;
+void Searcher::add_killer(Move move, int ply) {
+	if (move.equals(killer_table[ply][0])) return;
+	killer_table[ply][1] = killer_table[ply][0];
+	killer_table[ply][0] = move;
+}
+
+void Searcher::update_history(Board::Color side_to_move, Move move, int bonus) {
+	history_table[side_to_move][move.from()][move.to()] 
+		+= bonus - history_table[side_to_move][move.from()][move.to()] * bonus / MAX_HISTORY;
+}
+
+int Searcher::move_order_score(Position &pos, Move move, int ply, Move tt_best) {
+	if (tt_best.is_valid() && move.equals(tt_best)) return 300000;
 	if ((uint8_t)move.move_type() & (uint8_t)Move::MoveType::Capture) {
 		Board::PieceType target = pos.get_board().get_square(move.to()).pt;
 		Board::PieceType capturer = pos.get_board().get_square(move.from()).pt;
-		return 100 + mvv_lva[target-2][capturer-2];
+		return 200000 + mvv_lva[target-2][capturer-2];
+	}
+	if (move.move_type() == Move::MoveType::Quiet) {
+		if (move.equals(killer_table[ply][0])) return 100001;
+		if (move.equals(killer_table[ply][1])) return 100000; 
+		return history_table[pos.get_side_to_move()][move.from()][move.to()];
 	}
 	return 0;
 }
@@ -36,9 +53,9 @@ Move Searcher::pick_move(Position &pos, MoveList &move_list, int move_idx, int p
 	}
 	
 	int best = move_idx;
-	int best_score = move_order_score(pos, move_list[move_idx], tt_best);
+	int best_score = move_order_score(pos, move_list[move_idx], ply, tt_best);
 	for (int i = move_idx + 1; i < move_list.get_size(); i++) {
-		int score = move_order_score(pos, move_list[i], tt_best);
+		int score = move_order_score(pos, move_list[i], ply, tt_best);
 		if (score > best_score) {
 			best = i;
 			best_score = score;
@@ -70,6 +87,8 @@ Move Searcher::find_best_move(Position pos) {
 			previous_pv[i] = pv_table[0][i];
 		}
 		previous_pv_length = pv_length[0];
+
+		std::cout << "info depth " << d << " score cp " << new_sr.score << " nodes " << node_count << std::endl;
 	}
 	return sr.chosen_move;
 }
@@ -78,6 +97,14 @@ Searcher::SearchResult Searcher::quiesce(Position &pos, int alpha, int beta, int
 	SearchResult out;
 	node_count++;
 	out.node = node_count;
+
+	if (settings.finite_nodes && node_count >= settings.max_nodes)
+    stopping = true;
+
+	if (settings.finite_time && (node_count % 2048 == 0) && time_limit_reached())
+		stopping = true;
+
+	if (stopping) return out;
 
 	if (pos.has_threefold_repetition()) {
 		out.score = 0;
@@ -107,9 +134,7 @@ Searcher::SearchResult Searcher::quiesce(Position &pos, int alpha, int beta, int
 	bool could_move = false;
 	move_generator.gen_pseudo_legal_moves(pos, list_stack[ply]);
 	for (int ml_idx = 0; ml_idx < list_stack[ply].get_size(); ml_idx++) {
-		//Move move = list_stack[ply][ml_idx];
 		Move move = pick_move(pos, list_stack[ply], ml_idx, ply, Move());
-		//if (!in_check && !(((uint8_t)move.move_type() & (uint8_t)Move::MoveType::Capture) || ((uint8_t)move.move_type() & (uint8_t)Move::MoveType::KnightPromotion))) continue; // Skip non-capture moves
 		if (!in_check && (uint8_t)move.move_type() <= (uint8_t)Move::MoveType::QueenCastle) continue; // Skip non-tactical moves
 
 		pos.make_move(move);
@@ -117,8 +142,11 @@ Searcher::SearchResult Searcher::quiesce(Position &pos, int alpha, int beta, int
 		if (!move_generator.is_side_in_check(pos, move.move_type(), pos.get_next_to_move())) {
 			could_move = true;
 			SearchResult result = quiesce(pos, -beta, -alpha, ply+1);
-			result.score = -result.score;
 			pos.unmake_move(move);
+			if (stopping) {
+				return out;
+			}
+			result.score = -result.score;
 
 			if (result.score >= beta) {
 				out = result;
@@ -159,8 +187,10 @@ Searcher::SearchResult Searcher::negamax(Position &pos, int depth, int ply, int 
 		return out;
 	}
 	
+	if (stopping) return out;
+
 	// Base case
-	if (depth == 0 || stopping) {
+	if (depth == 0) {
 		SearchResult quiet = quiesce(pos, alpha, beta, ply);
 		return quiet;
 	}
@@ -198,6 +228,7 @@ Searcher::SearchResult Searcher::negamax(Position &pos, int depth, int ply, int 
 	int max = -INF;
 	move_generator.gen_pseudo_legal_moves(pos, list_stack[ply]);
 	bool could_move = false;
+	quiet_list.clear();
 	int move_idx = 0;
 	while (move_idx < list_stack[ply].get_size()) {
 		Move move = pick_move(pos, list_stack[ply], move_idx, ply, tt_best);
@@ -209,6 +240,10 @@ Searcher::SearchResult Searcher::negamax(Position &pos, int depth, int ply, int 
 			
 			SearchResult result = negamax(pos, depth-1, ply+1, -beta, -alpha);
 			result.score = -result.score;
+
+			if (move.move_type() == Move::MoveType::Quiet) {
+				quiet_list.add(move);
+			}
 						
 			if (result.score > max) {
 				max = result.score;
@@ -226,6 +261,16 @@ Searcher::SearchResult Searcher::negamax(Position &pos, int depth, int ply, int 
 			}
 			if (alpha >= beta) {
 				pos.unmake_move(move);
+				// If a beta cutoff happens with a quiet move, it's added to the killer and history tables
+				if (move.move_type() == Move::MoveType::Quiet) {
+					add_killer(move, ply);
+					int bonus = depth * depth;
+					update_history(pos.get_side_to_move(), move, bonus);
+					// Quiet moves that previously failed to cause a cutoff are devalued
+					for (int quiet_idx = 0; quiet_idx < quiet_list.get_size(); quiet_idx++) {
+						update_history(pos.get_side_to_move(), quiet_list[quiet_idx], -bonus);
+					}
+				}
 				break;
 			}
 		}
