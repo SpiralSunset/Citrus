@@ -1,0 +1,53 @@
+name: Build Citrus for macOS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-15-intel
+            arch: x86_64
+          - os: macos-15
+            arch: arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build Citrus
+        run: |
+          cmake --build build --config Release --parallel 2
+
+      - name: Verify executable
+        run: |
+          file build/Citrus
+          lipo -archs build/Citrus
+
+      - name: Test UCI
+        run: |
+          printf 'uci\nisready\nquit\n' | ./build/Citrus > output.txt
+          grep -q 'uciok' output.txt
+          grep -q 'readyok' output.txt
+
+      - name: Package executable
+        run: |
+          mkdir -p package
+          cp build/Citrus package/
+          cp README.md package/
+          cd package
+          zip -r ../Citrus-macos-${{ matrix.arch }}.zip .
+
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: Citrus-macos-${{ matrix.arch }}
+          path: Citrus-macos-${{ matrix.arch }}.zip
